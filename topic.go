@@ -26,4 +26,8 @@ const (
 
 	// TopicClobMarket is the topic for CLOB market data
 	TopicClobMarket Topic = "clob_market"
+
+	// Aliases for backward compatibility and clarity
+	TopicCLOBUser   = TopicClobUser
+	TopicCLOBMarket = TopicClobMarket
 )

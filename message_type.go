@@ -75,4 +75,11 @@ const (
 
 	// MessageTypeMarketResolved is the type for CLOB market resolution
 	MessageTypeMarketResolved MessageType = "market_resolved"
+
+	// Aliases for backward compatibility and clarity
+	MessageTypeCLOBOrder         = MessageTypeOrder
+	MessageTypeCLOBTrade         = MessageTypeTrade
+	MessageTypeCLOBPriceChanges  = MessageTypePriceChange
+	MessageTypeCLOBAggOrderbook  = MessageTypeAggOrderbook
+	MessageTypeCLOBLastTradePrice = MessageTypeLastTradePrice
 )

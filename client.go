@@ -25,8 +25,10 @@ type Client interface {
 	Unsubscribe(subscriptions []Subscription) error
 }
 
+// client wraps the real-time protocol client
+// This maintains backward compatibility with existing code
 type client struct {
-	// User-provided options
+	// User-provided options (kept for ClientOptions compatibility)
 	logger                Logger
 	pingInterval          time.Duration
 	host                  string

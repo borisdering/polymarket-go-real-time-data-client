@@ -16,7 +16,7 @@ func main() {
 	}
 
 	// Create a typed message router
-	router := polymarketdataclient.NewTypedMessageRouter()
+	router := polymarketdataclient.NewRealtimeMessageRouter()
 
 	// Register handler for CLOB user trades
 	router.RegisterCLOBTradeHandler(func(trade polymarketdataclient.CLOBTrade) error {
@@ -81,7 +81,7 @@ func main() {
 	}
 
 	// Create typed subscription handler
-	typedSub := polymarketdataclient.NewTypedSubscriptionHandler(client)
+	typedSub := polymarketdataclient.NewRealtimeTypedSubscriptionHandler(client)
 
 	// Create CLOB authentication
 	clobAuth := polymarketdataclient.ClobAuth{

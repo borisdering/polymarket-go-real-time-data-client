@@ -18,7 +18,7 @@ func main() {
 	}
 
 	// Create a typed message router
-	router := polymarketrealtime.NewTypedMessageRouter()
+	router := polymarketrealtime.NewRealtimeMessageRouter()
 
 	// Register handlers for different message types
 
@@ -115,7 +115,7 @@ func main() {
 	}
 
 	// Create typed subscription handler
-	typedSub := polymarketrealtime.NewTypedSubscriptionHandler(client)
+	typedSub := polymarketrealtime.NewRealtimeTypedSubscriptionHandler(client)
 
 	// Example 1: Subscribe to activity trades for a specific market
 	// Filter by event_slug or market_slug

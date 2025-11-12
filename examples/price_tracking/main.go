@@ -11,7 +11,7 @@ import (
 
 func main() {
 	// Create a typed message router
-	router := polymarketdataclient.NewTypedMessageRouter()
+	router := polymarketdataclient.NewRealtimeMessageRouter()
 
 	// Track crypto prices
 	router.RegisterCryptoPriceHandler(func(price polymarketdataclient.CryptoPrice) error {
@@ -53,7 +53,7 @@ func main() {
 	defer client.Disconnect()
 
 	// Create typed subscription handler
-	typedSub := polymarketdataclient.NewTypedSubscriptionHandler(client)
+	typedSub := polymarketdataclient.NewRealtimeTypedSubscriptionHandler(client)
 
 	log.Println("Subscribing to price feeds...")
 

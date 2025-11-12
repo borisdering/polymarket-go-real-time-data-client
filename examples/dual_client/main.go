@@ -17,7 +17,7 @@ func main() {
 	// ========== Real-Time Data Client ==========
 	log.Println("Setting up Real-Time Data client...")
 
-	realtimeRouter := polymarketdataclient.NewTypedMessageRouter()
+	realtimeRouter := polymarketdataclient.NewRealtimeMessageRouter()
 
 	realtimeRouter.RegisterCryptoPriceHandler(func(price polymarketdataclient.CryptoPrice) error {
 		log.Printf("[Real-Time] Crypto Price: %s = $%s", price.Symbol, price.Value.String())
@@ -79,7 +79,7 @@ func main() {
 	log.Println("\nSubscing to data streams...")
 
 	// Subscribe to Bitcoin price updates
-	realtimeTypedSub := polymarketdataclient.NewTypedSubscriptionHandler(realtimeClient)
+	realtimeTypedSub := polymarketdataclient.NewRealtimeTypedSubscriptionHandler(realtimeClient)
 	if err := realtimeTypedSub.SubscribeToCryptoPrices(nil, `{"symbol":"btcusdt"}`); err != nil {
 		log.Printf("Warning: Failed to subscribe to crypto prices: %v", err)
 	} else {

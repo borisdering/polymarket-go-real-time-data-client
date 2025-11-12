@@ -5,14 +5,14 @@ import (
 	"fmt"
 )
 
-// TypedSubscriptionHandler provides type-safe subscription handlers for different message types
-type TypedSubscriptionHandler struct {
+// RealtimeTypedSubscriptionHandler provides type-safe subscription handlers for different message types
+type RealtimeTypedSubscriptionHandler struct {
 	client Client
 }
 
-// NewTypedSubscriptionHandler creates a new typed subscription handler
-func NewTypedSubscriptionHandler(client Client) *TypedSubscriptionHandler {
-	return &TypedSubscriptionHandler{
+// NewRealtimeTypedSubscriptionHandler creates a new typed subscription handler
+func NewRealtimeTypedSubscriptionHandler(client Client) *RealtimeTypedSubscriptionHandler {
+	return &RealtimeTypedSubscriptionHandler{
 		client: client,
 	}
 }
@@ -23,7 +23,7 @@ func NewTypedSubscriptionHandler(client Client) *TypedSubscriptionHandler {
 type ActivityTradesCallback func(trade Trade) error
 
 // SubscribeToActivityTrades subscribes to activity trades with a typed callback
-func (h *TypedSubscriptionHandler) SubscribeToActivityTrades(callback ActivityTradesCallback, filters ...string) error {
+func (h *RealtimeTypedSubscriptionHandler) SubscribeToActivityTrades(callback ActivityTradesCallback, filters ...string) error {
 	filter := ""
 	if len(filters) > 0 {
 		filter = filters[0]
@@ -42,7 +42,7 @@ func (h *TypedSubscriptionHandler) SubscribeToActivityTrades(callback ActivityTr
 type ActivityOrdersMatchedCallback func(trade Trade) error
 
 // SubscribeToActivityOrdersMatched subscribes to activity orders matched with a typed callback
-func (h *TypedSubscriptionHandler) SubscribeToActivityOrdersMatched(callback ActivityOrdersMatchedCallback, filters ...string) error {
+func (h *RealtimeTypedSubscriptionHandler) SubscribeToActivityOrdersMatched(callback ActivityOrdersMatchedCallback, filters ...string) error {
 	filter := ""
 	if len(filters) > 0 {
 		filter = filters[0]
@@ -63,7 +63,7 @@ func (h *TypedSubscriptionHandler) SubscribeToActivityOrdersMatched(callback Act
 type CommentCreatedCallback func(comment Comment) error
 
 // SubscribeToCommentCreated subscribes to comment created events with a typed callback
-func (h *TypedSubscriptionHandler) SubscribeToCommentCreated(callback CommentCreatedCallback, filters ...string) error {
+func (h *RealtimeTypedSubscriptionHandler) SubscribeToCommentCreated(callback CommentCreatedCallback, filters ...string) error {
 	filter := ""
 	if len(filters) > 0 {
 		filter = filters[0]
@@ -82,7 +82,7 @@ func (h *TypedSubscriptionHandler) SubscribeToCommentCreated(callback CommentCre
 type CommentRemovedCallback func(comment Comment) error
 
 // SubscribeToCommentRemoved subscribes to comment removed events with a typed callback
-func (h *TypedSubscriptionHandler) SubscribeToCommentRemoved(callback CommentRemovedCallback, filters ...string) error {
+func (h *RealtimeTypedSubscriptionHandler) SubscribeToCommentRemoved(callback CommentRemovedCallback, filters ...string) error {
 	filter := ""
 	if len(filters) > 0 {
 		filter = filters[0]
@@ -101,7 +101,7 @@ func (h *TypedSubscriptionHandler) SubscribeToCommentRemoved(callback CommentRem
 type ReactionCreatedCallback func(reaction Reaction) error
 
 // SubscribeToReactionCreated subscribes to reaction created events with a typed callback
-func (h *TypedSubscriptionHandler) SubscribeToReactionCreated(callback ReactionCreatedCallback, filters ...string) error {
+func (h *RealtimeTypedSubscriptionHandler) SubscribeToReactionCreated(callback ReactionCreatedCallback, filters ...string) error {
 	filter := ""
 	if len(filters) > 0 {
 		filter = filters[0]
@@ -120,7 +120,7 @@ func (h *TypedSubscriptionHandler) SubscribeToReactionCreated(callback ReactionC
 type ReactionRemovedCallback func(reaction Reaction) error
 
 // SubscribeToReactionRemoved subscribes to reaction removed events with a typed callback
-func (h *TypedSubscriptionHandler) SubscribeToReactionRemoved(callback ReactionRemovedCallback, filters ...string) error {
+func (h *RealtimeTypedSubscriptionHandler) SubscribeToReactionRemoved(callback ReactionRemovedCallback, filters ...string) error {
 	filter := ""
 	if len(filters) > 0 {
 		filter = filters[0]
@@ -141,7 +141,7 @@ func (h *TypedSubscriptionHandler) SubscribeToReactionRemoved(callback ReactionR
 type RFQRequestCallback func(request RFQRequest) error
 
 // SubscribeToRFQRequestCreated subscribes to RFQ request created events
-func (h *TypedSubscriptionHandler) SubscribeToRFQRequestCreated(callback RFQRequestCallback) error {
+func (h *RealtimeTypedSubscriptionHandler) SubscribeToRFQRequestCreated(callback RFQRequestCallback) error {
 	return h.client.Subscribe([]Subscription{
 		{
 			Topic: TopicRfq,
@@ -151,7 +151,7 @@ func (h *TypedSubscriptionHandler) SubscribeToRFQRequestCreated(callback RFQRequ
 }
 
 // SubscribeToRFQRequestEdited subscribes to RFQ request edited events
-func (h *TypedSubscriptionHandler) SubscribeToRFQRequestEdited(callback RFQRequestCallback) error {
+func (h *RealtimeTypedSubscriptionHandler) SubscribeToRFQRequestEdited(callback RFQRequestCallback) error {
 	return h.client.Subscribe([]Subscription{
 		{
 			Topic: TopicRfq,
@@ -161,7 +161,7 @@ func (h *TypedSubscriptionHandler) SubscribeToRFQRequestEdited(callback RFQReque
 }
 
 // SubscribeToRFQRequestCanceled subscribes to RFQ request canceled events
-func (h *TypedSubscriptionHandler) SubscribeToRFQRequestCanceled(callback RFQRequestCallback) error {
+func (h *RealtimeTypedSubscriptionHandler) SubscribeToRFQRequestCanceled(callback RFQRequestCallback) error {
 	return h.client.Subscribe([]Subscription{
 		{
 			Topic: TopicRfq,
@@ -171,7 +171,7 @@ func (h *TypedSubscriptionHandler) SubscribeToRFQRequestCanceled(callback RFQReq
 }
 
 // SubscribeToRFQRequestExpired subscribes to RFQ request expired events
-func (h *TypedSubscriptionHandler) SubscribeToRFQRequestExpired(callback RFQRequestCallback) error {
+func (h *RealtimeTypedSubscriptionHandler) SubscribeToRFQRequestExpired(callback RFQRequestCallback) error {
 	return h.client.Subscribe([]Subscription{
 		{
 			Topic: TopicRfq,
@@ -184,7 +184,7 @@ func (h *TypedSubscriptionHandler) SubscribeToRFQRequestExpired(callback RFQRequ
 type RFQQuoteCallback func(quote RFQQuote) error
 
 // SubscribeToRFQQuoteCreated subscribes to RFQ quote created events
-func (h *TypedSubscriptionHandler) SubscribeToRFQQuoteCreated(callback RFQQuoteCallback) error {
+func (h *RealtimeTypedSubscriptionHandler) SubscribeToRFQQuoteCreated(callback RFQQuoteCallback) error {
 	return h.client.Subscribe([]Subscription{
 		{
 			Topic: TopicRfq,
@@ -194,7 +194,7 @@ func (h *TypedSubscriptionHandler) SubscribeToRFQQuoteCreated(callback RFQQuoteC
 }
 
 // SubscribeToRFQQuoteEdited subscribes to RFQ quote edited events
-func (h *TypedSubscriptionHandler) SubscribeToRFQQuoteEdited(callback RFQQuoteCallback) error {
+func (h *RealtimeTypedSubscriptionHandler) SubscribeToRFQQuoteEdited(callback RFQQuoteCallback) error {
 	return h.client.Subscribe([]Subscription{
 		{
 			Topic: TopicRfq,
@@ -204,7 +204,7 @@ func (h *TypedSubscriptionHandler) SubscribeToRFQQuoteEdited(callback RFQQuoteCa
 }
 
 // SubscribeToRFQQuoteCanceled subscribes to RFQ quote canceled events
-func (h *TypedSubscriptionHandler) SubscribeToRFQQuoteCanceled(callback RFQQuoteCallback) error {
+func (h *RealtimeTypedSubscriptionHandler) SubscribeToRFQQuoteCanceled(callback RFQQuoteCallback) error {
 	return h.client.Subscribe([]Subscription{
 		{
 			Topic: TopicRfq,
@@ -214,7 +214,7 @@ func (h *TypedSubscriptionHandler) SubscribeToRFQQuoteCanceled(callback RFQQuote
 }
 
 // SubscribeToRFQQuoteExpired subscribes to RFQ quote expired events
-func (h *TypedSubscriptionHandler) SubscribeToRFQQuoteExpired(callback RFQQuoteCallback) error {
+func (h *RealtimeTypedSubscriptionHandler) SubscribeToRFQQuoteExpired(callback RFQQuoteCallback) error {
 	return h.client.Subscribe([]Subscription{
 		{
 			Topic: TopicRfq,
@@ -230,7 +230,7 @@ type CryptoPriceCallback func(price CryptoPrice) error
 
 // SubscribeToCryptoPrices subscribes to crypto price updates
 // filters example: `{"symbol":"BTCUSDT"}`
-func (h *TypedSubscriptionHandler) SubscribeToCryptoPrices(callback CryptoPriceCallback, filters ...string) error {
+func (h *RealtimeTypedSubscriptionHandler) SubscribeToCryptoPrices(callback CryptoPriceCallback, filters ...string) error {
 	filter := ""
 	if len(filters) > 0 {
 		filter = filters[0]
@@ -247,7 +247,7 @@ func (h *TypedSubscriptionHandler) SubscribeToCryptoPrices(callback CryptoPriceC
 
 // SubscribeToCryptoPricesChainlink subscribes to crypto price updates from Chainlink
 // filters example: `{"symbol":"BTCUSDT"}`
-func (h *TypedSubscriptionHandler) SubscribeToCryptoPricesChainlink(callback CryptoPriceCallback, filters ...string) error {
+func (h *RealtimeTypedSubscriptionHandler) SubscribeToCryptoPricesChainlink(callback CryptoPriceCallback, filters ...string) error {
 	filter := ""
 	if len(filters) > 0 {
 		filter = filters[0]
@@ -269,7 +269,7 @@ type EquityPriceCallback func(price EquityPrice) error
 
 // SubscribeToEquityPrices subscribes to equity price updates
 // filters example: `{"symbol":"AAPL"}`
-func (h *TypedSubscriptionHandler) SubscribeToEquityPrices(callback EquityPriceCallback, filters ...string) error {
+func (h *RealtimeTypedSubscriptionHandler) SubscribeToEquityPrices(callback EquityPriceCallback, filters ...string) error {
 	filter := ""
 	if len(filters) > 0 {
 		filter = filters[0]
@@ -290,7 +290,7 @@ func (h *TypedSubscriptionHandler) SubscribeToEquityPrices(callback EquityPriceC
 type CLOBOrderCallback func(order CLOBOrder) error
 
 // SubscribeToCLOBUserOrders subscribes to CLOB user orders
-func (h *TypedSubscriptionHandler) SubscribeToCLOBUserOrders(auth ClobAuth, callback CLOBOrderCallback) error {
+func (h *RealtimeTypedSubscriptionHandler) SubscribeToCLOBUserOrders(auth ClobAuth, callback CLOBOrderCallback) error {
 	return h.client.Subscribe([]Subscription{
 		{
 			Topic:    TopicClobUser,
@@ -304,7 +304,7 @@ func (h *TypedSubscriptionHandler) SubscribeToCLOBUserOrders(auth ClobAuth, call
 type CLOBTradeCallback func(trade CLOBTrade) error
 
 // SubscribeToCLOBUserTrades subscribes to CLOB user trades
-func (h *TypedSubscriptionHandler) SubscribeToCLOBUserTrades(auth ClobAuth, callback CLOBTradeCallback) error {
+func (h *RealtimeTypedSubscriptionHandler) SubscribeToCLOBUserTrades(auth ClobAuth, callback CLOBTradeCallback) error {
 	return h.client.Subscribe([]Subscription{
 		{
 			Topic:    TopicClobUser,
@@ -315,7 +315,7 @@ func (h *TypedSubscriptionHandler) SubscribeToCLOBUserTrades(auth ClobAuth, call
 }
 
 // SubscribeToCLOBUserAll subscribes to all CLOB user messages (orders and trades)
-func (h *TypedSubscriptionHandler) SubscribeToCLOBUserAll(auth ClobAuth) error {
+func (h *RealtimeTypedSubscriptionHandler) SubscribeToCLOBUserAll(auth ClobAuth) error {
 	return h.client.Subscribe([]Subscription{
 		{
 			Topic:    TopicClobUser,
@@ -332,7 +332,7 @@ type PriceChangesCallback func(changes PriceChanges) error
 
 // SubscribeToCLOBMarketPriceChanges subscribes to CLOB market price changes
 // filters are mandatory and should contain token IDs, example: `["100","200"]`
-func (h *TypedSubscriptionHandler) SubscribeToCLOBMarketPriceChanges(filters string, callback PriceChangesCallback) error {
+func (h *RealtimeTypedSubscriptionHandler) SubscribeToCLOBMarketPriceChanges(filters string, callback PriceChangesCallback) error {
 	if filters == "" {
 		return fmt.Errorf("filters are mandatory for price_change subscription")
 	}
@@ -351,7 +351,7 @@ type AggOrderbookCallback func(orderbook AggOrderbook) error
 
 // SubscribeToCLOBMarketAggOrderbook subscribes to CLOB market aggregated orderbook
 // filters example: `["100","200"]` (token IDs)
-func (h *TypedSubscriptionHandler) SubscribeToCLOBMarketAggOrderbook(callback AggOrderbookCallback, filters ...string) error {
+func (h *RealtimeTypedSubscriptionHandler) SubscribeToCLOBMarketAggOrderbook(callback AggOrderbookCallback, filters ...string) error {
 	filter := ""
 	if len(filters) > 0 {
 		filter = filters[0]
@@ -371,7 +371,7 @@ type LastTradePriceCallback func(lastPrice LastTradePrice) error
 
 // SubscribeToCLOBMarketLastTradePrice subscribes to CLOB market last trade price
 // filters example: `["100","200"]` (token IDs)
-func (h *TypedSubscriptionHandler) SubscribeToCLOBMarketLastTradePrice(callback LastTradePriceCallback, filters ...string) error {
+func (h *RealtimeTypedSubscriptionHandler) SubscribeToCLOBMarketLastTradePrice(callback LastTradePriceCallback, filters ...string) error {
 	filter := ""
 	if len(filters) > 0 {
 		filter = filters[0]
@@ -391,7 +391,7 @@ type TickSizeChangeCallback func(change TickSizeChange) error
 
 // SubscribeToCLOBMarketTickSizeChange subscribes to CLOB market tick size changes
 // filters example: `["100","200"]` (token IDs)
-func (h *TypedSubscriptionHandler) SubscribeToCLOBMarketTickSizeChange(callback TickSizeChangeCallback, filters ...string) error {
+func (h *RealtimeTypedSubscriptionHandler) SubscribeToCLOBMarketTickSizeChange(callback TickSizeChangeCallback, filters ...string) error {
 	filter := ""
 	if len(filters) > 0 {
 		filter = filters[0]
@@ -410,7 +410,7 @@ func (h *TypedSubscriptionHandler) SubscribeToCLOBMarketTickSizeChange(callback 
 type ClobMarketCallback func(market ClobMarket) error
 
 // SubscribeToCLOBMarketCreated subscribes to CLOB market created events
-func (h *TypedSubscriptionHandler) SubscribeToCLOBMarketCreated(callback ClobMarketCallback) error {
+func (h *RealtimeTypedSubscriptionHandler) SubscribeToCLOBMarketCreated(callback ClobMarketCallback) error {
 	return h.client.Subscribe([]Subscription{
 		{
 			Topic: TopicClobMarket,
@@ -420,7 +420,7 @@ func (h *TypedSubscriptionHandler) SubscribeToCLOBMarketCreated(callback ClobMar
 }
 
 // SubscribeToCLOBMarketResolved subscribes to CLOB market resolved events
-func (h *TypedSubscriptionHandler) SubscribeToCLOBMarketResolved(callback ClobMarketCallback) error {
+func (h *RealtimeTypedSubscriptionHandler) SubscribeToCLOBMarketResolved(callback ClobMarketCallback) error {
 	return h.client.Subscribe([]Subscription{
 		{
 			Topic: TopicClobMarket,
@@ -429,8 +429,8 @@ func (h *TypedSubscriptionHandler) SubscribeToCLOBMarketResolved(callback ClobMa
 	})
 }
 
-// TypedMessageRouter routes incoming messages to registered typed callbacks
-type TypedMessageRouter struct {
+// RealtimeMessageRouter routes incoming messages to registered typed callbacks
+type RealtimeMessageRouter struct {
 	// Activity handlers
 	activityTradesHandlers        []ActivityTradesCallback
 	activityOrdersMatchedHandlers []ActivityOrdersMatchedCallback
@@ -461,98 +461,98 @@ type TypedMessageRouter struct {
 	clobMarketHandlers     []ClobMarketCallback
 }
 
-// NewTypedMessageRouter creates a new typed message router
-func NewTypedMessageRouter() *TypedMessageRouter {
-	return &TypedMessageRouter{}
+// NewRealtimeMessageRouter creates a new typed message router
+func NewRealtimeMessageRouter() *RealtimeMessageRouter {
+	return &RealtimeMessageRouter{}
 }
 
 // RegisterActivityTradesHandler registers a handler for activity trades
-func (r *TypedMessageRouter) RegisterActivityTradesHandler(handler ActivityTradesCallback) {
+func (r *RealtimeMessageRouter) RegisterActivityTradesHandler(handler ActivityTradesCallback) {
 	r.activityTradesHandlers = append(r.activityTradesHandlers, handler)
 }
 
 // RegisterActivityOrdersMatchedHandler registers a handler for activity orders matched
-func (r *TypedMessageRouter) RegisterActivityOrdersMatchedHandler(handler ActivityOrdersMatchedCallback) {
+func (r *RealtimeMessageRouter) RegisterActivityOrdersMatchedHandler(handler ActivityOrdersMatchedCallback) {
 	r.activityOrdersMatchedHandlers = append(r.activityOrdersMatchedHandlers, handler)
 }
 
 // RegisterCommentCreatedHandler registers a handler for comment created events
-func (r *TypedMessageRouter) RegisterCommentCreatedHandler(handler CommentCreatedCallback) {
+func (r *RealtimeMessageRouter) RegisterCommentCreatedHandler(handler CommentCreatedCallback) {
 	r.commentCreatedHandlers = append(r.commentCreatedHandlers, handler)
 }
 
 // RegisterCommentRemovedHandler registers a handler for comment removed events
-func (r *TypedMessageRouter) RegisterCommentRemovedHandler(handler CommentRemovedCallback) {
+func (r *RealtimeMessageRouter) RegisterCommentRemovedHandler(handler CommentRemovedCallback) {
 	r.commentRemovedHandlers = append(r.commentRemovedHandlers, handler)
 }
 
 // RegisterReactionCreatedHandler registers a handler for reaction created events
-func (r *TypedMessageRouter) RegisterReactionCreatedHandler(handler ReactionCreatedCallback) {
+func (r *RealtimeMessageRouter) RegisterReactionCreatedHandler(handler ReactionCreatedCallback) {
 	r.reactionCreatedHandlers = append(r.reactionCreatedHandlers, handler)
 }
 
 // RegisterReactionRemovedHandler registers a handler for reaction removed events
-func (r *TypedMessageRouter) RegisterReactionRemovedHandler(handler ReactionRemovedCallback) {
+func (r *RealtimeMessageRouter) RegisterReactionRemovedHandler(handler ReactionRemovedCallback) {
 	r.reactionRemovedHandlers = append(r.reactionRemovedHandlers, handler)
 }
 
 // RegisterRFQRequestHandler registers a handler for RFQ request messages
-func (r *TypedMessageRouter) RegisterRFQRequestHandler(handler RFQRequestCallback) {
+func (r *RealtimeMessageRouter) RegisterRFQRequestHandler(handler RFQRequestCallback) {
 	r.rfqRequestHandlers = append(r.rfqRequestHandlers, handler)
 }
 
 // RegisterRFQQuoteHandler registers a handler for RFQ quote messages
-func (r *TypedMessageRouter) RegisterRFQQuoteHandler(handler RFQQuoteCallback) {
+func (r *RealtimeMessageRouter) RegisterRFQQuoteHandler(handler RFQQuoteCallback) {
 	r.rfqQuoteHandlers = append(r.rfqQuoteHandlers, handler)
 }
 
 // RegisterCryptoPriceHandler registers a handler for crypto price updates
-func (r *TypedMessageRouter) RegisterCryptoPriceHandler(handler CryptoPriceCallback) {
+func (r *RealtimeMessageRouter) RegisterCryptoPriceHandler(handler CryptoPriceCallback) {
 	r.cryptoPriceHandlers = append(r.cryptoPriceHandlers, handler)
 }
 
 // RegisterEquityPriceHandler registers a handler for equity price updates
-func (r *TypedMessageRouter) RegisterEquityPriceHandler(handler EquityPriceCallback) {
+func (r *RealtimeMessageRouter) RegisterEquityPriceHandler(handler EquityPriceCallback) {
 	r.equityPriceHandlers = append(r.equityPriceHandlers, handler)
 }
 
 // RegisterCLOBOrderHandler registers a handler for CLOB order messages
-func (r *TypedMessageRouter) RegisterCLOBOrderHandler(handler CLOBOrderCallback) {
+func (r *RealtimeMessageRouter) RegisterCLOBOrderHandler(handler CLOBOrderCallback) {
 	r.clobOrderHandlers = append(r.clobOrderHandlers, handler)
 }
 
 // RegisterCLOBTradeHandler registers a handler for CLOB trade messages
-func (r *TypedMessageRouter) RegisterCLOBTradeHandler(handler CLOBTradeCallback) {
+func (r *RealtimeMessageRouter) RegisterCLOBTradeHandler(handler CLOBTradeCallback) {
 	r.clobTradeHandlers = append(r.clobTradeHandlers, handler)
 }
 
 // RegisterPriceChangesHandler registers a handler for price changes
-func (r *TypedMessageRouter) RegisterPriceChangesHandler(handler PriceChangesCallback) {
+func (r *RealtimeMessageRouter) RegisterPriceChangesHandler(handler PriceChangesCallback) {
 	r.priceChangesHandlers = append(r.priceChangesHandlers, handler)
 }
 
 // RegisterAggOrderbookHandler registers a handler for aggregated orderbook
-func (r *TypedMessageRouter) RegisterAggOrderbookHandler(handler AggOrderbookCallback) {
+func (r *RealtimeMessageRouter) RegisterAggOrderbookHandler(handler AggOrderbookCallback) {
 	r.aggOrderbookHandlers = append(r.aggOrderbookHandlers, handler)
 }
 
 // RegisterLastTradePriceHandler registers a handler for last trade price
-func (r *TypedMessageRouter) RegisterLastTradePriceHandler(handler LastTradePriceCallback) {
+func (r *RealtimeMessageRouter) RegisterLastTradePriceHandler(handler LastTradePriceCallback) {
 	r.lastTradePriceHandlers = append(r.lastTradePriceHandlers, handler)
 }
 
 // RegisterTickSizeChangeHandler registers a handler for tick size changes
-func (r *TypedMessageRouter) RegisterTickSizeChangeHandler(handler TickSizeChangeCallback) {
+func (r *RealtimeMessageRouter) RegisterTickSizeChangeHandler(handler TickSizeChangeCallback) {
 	r.tickSizeChangeHandlers = append(r.tickSizeChangeHandlers, handler)
 }
 
 // RegisterClobMarketHandler registers a handler for CLOB market events
-func (r *TypedMessageRouter) RegisterClobMarketHandler(handler ClobMarketCallback) {
+func (r *RealtimeMessageRouter) RegisterClobMarketHandler(handler ClobMarketCallback) {
 	r.clobMarketHandlers = append(r.clobMarketHandlers, handler)
 }
 
 // RouteMessage routes a raw message to the appropriate typed handlers
-func (r *TypedMessageRouter) RouteMessage(data []byte) error {
+func (r *RealtimeMessageRouter) RouteMessage(data []byte) error {
 	var msg Message
 	if err := json.Unmarshal(data, &msg); err != nil {
 		return fmt.Errorf("failed to unmarshal message: %w", err)
@@ -578,7 +578,7 @@ func (r *TypedMessageRouter) RouteMessage(data []byte) error {
 	}
 }
 
-func (r *TypedMessageRouter) routeActivityMessage(msg Message) error {
+func (r *RealtimeMessageRouter) routeActivityMessage(msg Message) error {
 	switch msg.Type {
 	case MessageTypeTrades:
 		var trade Trade
@@ -604,7 +604,7 @@ func (r *TypedMessageRouter) routeActivityMessage(msg Message) error {
 	return nil
 }
 
-func (r *TypedMessageRouter) routeCommentsMessage(msg Message) error {
+func (r *RealtimeMessageRouter) routeCommentsMessage(msg Message) error {
 	switch msg.Type {
 	case MessageTypeCommentCreated:
 		var comment Comment
@@ -650,7 +650,7 @@ func (r *TypedMessageRouter) routeCommentsMessage(msg Message) error {
 	return nil
 }
 
-func (r *TypedMessageRouter) routeRFQMessage(msg Message) error {
+func (r *RealtimeMessageRouter) routeRFQMessage(msg Message) error {
 	switch msg.Type {
 	case MessageTypeRequestCreated, MessageTypeRequestEdited, MessageTypeRequestCanceled, MessageTypeRequestExpired:
 		var request RFQRequest
@@ -676,7 +676,7 @@ func (r *TypedMessageRouter) routeRFQMessage(msg Message) error {
 	return nil
 }
 
-func (r *TypedMessageRouter) routeCryptoPriceMessage(msg Message) error {
+func (r *RealtimeMessageRouter) routeCryptoPriceMessage(msg Message) error {
 	if msg.Type == MessageTypeUpdate {
 		var price CryptoPrice
 		if err := json.Unmarshal(msg.Payload, &price); err != nil {
@@ -691,7 +691,7 @@ func (r *TypedMessageRouter) routeCryptoPriceMessage(msg Message) error {
 	return nil
 }
 
-func (r *TypedMessageRouter) routeEquityPriceMessage(msg Message) error {
+func (r *RealtimeMessageRouter) routeEquityPriceMessage(msg Message) error {
 	if msg.Type == MessageTypeUpdate {
 		var price EquityPrice
 		if err := json.Unmarshal(msg.Payload, &price); err != nil {
@@ -706,7 +706,7 @@ func (r *TypedMessageRouter) routeEquityPriceMessage(msg Message) error {
 	return nil
 }
 
-func (r *TypedMessageRouter) routeCLOBUserMessage(msg Message) error {
+func (r *RealtimeMessageRouter) routeCLOBUserMessage(msg Message) error {
 	switch msg.Type {
 	case MessageTypeOrder:
 		var order CLOBOrder
@@ -732,7 +732,7 @@ func (r *TypedMessageRouter) routeCLOBUserMessage(msg Message) error {
 	return nil
 }
 
-func (r *TypedMessageRouter) routeCLOBMarketMessage(msg Message) error {
+func (r *RealtimeMessageRouter) routeCLOBMarketMessage(msg Message) error {
 	switch msg.Type {
 	case MessageTypePriceChange:
 		var changes PriceChanges

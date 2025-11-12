@@ -284,8 +284,8 @@ type PriceChange struct {
 	AssetID string          `json:"a"`  // Asset identifier
 	Hash    string          `json:"h"`  // Unique hash ID of the book snapshot
 	Price   decimal.Decimal `json:"p"`  // Price quoted (e.g., 0.5)
-	Side    Side            `json:"s"`  // Side of the quote: BUY or SELL
-	Size    decimal.Decimal `json:"si"` // Size or volume available at the quoted price (e.g., 0, 100)
+	Side    Side            `json:"si"` // Side of the quote: BUY or SELL
+	Size    decimal.Decimal `json:"s"`  // Size or volume available at the quoted price (e.g., 0, 100)
 	BestAsk decimal.Decimal `json:"ba"` // Best ask price
 	BestBid decimal.Decimal `json:"bb"` // Best bid price
 }

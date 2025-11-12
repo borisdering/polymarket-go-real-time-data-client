@@ -6,7 +6,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	polymarketdataclient "github.com/ivanzzeth/polymarket-go-real-time-data-client"
+	polymarketrealtime "github.com/ivanzzeth/polymarket-go-real-time-data-client"
 )
 
 func main() {
@@ -15,10 +15,10 @@ func main() {
 	log.Println()
 
 	// Create a message router for typed handling
-	router := polymarketdataclient.NewClobMarketMessageRouter()
+	router := polymarketrealtime.NewClobMarketMessageRouter()
 
 	// Register handlers for different market data types
-	router.RegisterOrderbookHandler(func(orderbook polymarketdataclient.AggOrderbook) error {
+	router.RegisterOrderbookHandler(func(orderbook polymarketrealtime.AggOrderbook) error {
 		log.Printf("[Orderbook Update] Asset: %s, Market: %s, Bids: %d levels, Asks: %d levels",
 			orderbook.AssetID,
 			orderbook.Market,
@@ -37,7 +37,7 @@ func main() {
 		return nil
 	})
 
-	router.RegisterPriceChangesHandler(func(priceChanges polymarketdataclient.PriceChanges) error {
+	router.RegisterPriceChangesHandler(func(priceChanges polymarketrealtime.PriceChanges) error {
 		log.Printf("[Price Changes] Market: %s, Changes: %d", priceChanges.Market, len(priceChanges.PriceChange))
 
 		for _, change := range priceChanges.PriceChange {
@@ -54,7 +54,7 @@ func main() {
 		return nil
 	})
 
-	router.RegisterLastTradePriceHandler(func(lastPrice polymarketdataclient.LastTradePrice) error {
+	router.RegisterLastTradePriceHandler(func(lastPrice polymarketrealtime.LastTradePrice) error {
 		log.Printf("[Last Trade Price] Asset: %s, Market: %s, Side: %s, Price: %s, Size: %s",
 			lastPrice.AssetID,
 			lastPrice.Market,
@@ -66,19 +66,19 @@ func main() {
 	})
 
 	// Create CLOB Market client
-	client := polymarketdataclient.NewClobMarketClient(
-		polymarketdataclient.WithLogger(polymarketdataclient.NewLogger()),
-		polymarketdataclient.WithAutoReconnect(true),
-		polymarketdataclient.WithOnConnect(func() {
+	client := polymarketrealtime.NewClobMarketClient(
+		polymarketrealtime.WithLogger(polymarketrealtime.NewLogger()),
+		polymarketrealtime.WithAutoReconnect(true),
+		polymarketrealtime.WithOnConnect(func() {
 			log.Println("✅ Connected to CLOB Market endpoint")
 		}),
-		polymarketdataclient.WithOnDisconnect(func(err error) {
+		polymarketrealtime.WithOnDisconnect(func(err error) {
 			log.Printf("❌ Disconnected from CLOB Market endpoint: %v", err)
 		}),
-		polymarketdataclient.WithOnReconnect(func() {
+		polymarketrealtime.WithOnReconnect(func() {
 			log.Println("🔄 Reconnected to CLOB Market endpoint")
 		}),
-		polymarketdataclient.WithOnNewMessage(func(data []byte) {
+		polymarketrealtime.WithOnNewMessage(func(data []byte) {
 			// Route message to appropriate handler
 			if err := router.RouteMessage(data); err != nil {
 				log.Printf("Error routing message: %v", err)
@@ -93,7 +93,7 @@ func main() {
 	}
 
 	// Create typed subscription handler
-	typedSub := polymarketdataclient.NewClobMarketTypedSubscriptionHandler(client)
+	typedSub := polymarketrealtime.NewClobMarketTypedSubscriptionHandler(client)
 
 	// Subscribe to market data for specific assets
 	// Replace with your actual asset IDs

@@ -24,21 +24,21 @@ import (
 	"log"
 	"time"
 
-	polymarketdataclient "github.com/ivanzzeth/polymarket-go-real-time-data-client"
+	polymarketrealtime "github.com/ivanzzeth/polymarket-go-real-time-data-client"
 )
 
 func main() {
 	// Create a new client with options
-	client := polymarketdataclient.New(
-		// polymarketdataclient.WithLogger(polymarketdataclient.NewLogger()),
-		polymarketdataclient.WithLogger(polymarketdataclient.NewSilentLogger()),
-		polymarketdataclient.WithOnConnect(func() {
+	client := polymarketrealtime.New(
+		// polymarketrealtime.WithLogger(polymarketrealtime.NewLogger()),
+		polymarketrealtime.WithLogger(polymarketrealtime.NewSilentLogger()),
+		polymarketrealtime.WithOnConnect(func() {
 			fmt.Println("Connected to Polymarket WebSocket!")
 		}),
-		polymarketdataclient.WithOnNewMessage(func(data []byte) {
+		polymarketrealtime.WithOnNewMessage(func(data []byte) {
 			// log.Printf("Received raw message: %s\n", string(data))
 
-			var msg polymarketdataclient.SubscriptionMessage
+			var msg polymarketrealtime.SubscriptionMessage
 			err := json.Unmarshal(data, &msg)
 			if err != nil {
 				log.Printf("Invalid message %v received: %v", msg, err)
@@ -48,10 +48,10 @@ func main() {
 			// fmt.Printf("Received msg: %s\n", string(data))
 
 			switch msg.Topic {
-			case polymarketdataclient.TopicActivity:
+			case polymarketrealtime.TopicActivity:
 				switch msg.Type {
-				case polymarketdataclient.MessageTypeTrades:
-					var trade polymarketdataclient.Trade
+				case polymarketrealtime.MessageTypeTrades:
+					var trade polymarketrealtime.Trade
 					err = json.Unmarshal(msg.Payload, &trade)
 					if err != nil {
 						log.Printf("Invalid trade %v received: %v", msg.Payload, err)
@@ -60,7 +60,7 @@ func main() {
 
 					log.Printf("Trade: %+v\n", trade)
 				}
-			case polymarketdataclient.TopicComments:
+			case polymarketrealtime.TopicComments:
 				// TODO:
 			}
 
@@ -74,14 +74,14 @@ func main() {
 	}
 
 	// Subscribe to market data
-	subscriptions := []polymarketdataclient.Subscription{
+	subscriptions := []polymarketrealtime.Subscription{
 		{
-			Topic: polymarketdataclient.TopicActivity,
-			Type:  polymarketdataclient.MessageTypeAll,
+			Topic: polymarketrealtime.TopicActivity,
+			Type:  polymarketrealtime.MessageTypeAll,
 		},
 		{
-			Topic: polymarketdataclient.TopicComments,
-			Type:  polymarketdataclient.MessageTypeCommentCreated,
+			Topic: polymarketrealtime.TopicComments,
+			Type:  polymarketrealtime.MessageTypeCommentCreated,
 		},
 	}
 

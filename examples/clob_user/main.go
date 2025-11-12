@@ -8,7 +8,7 @@ import (
 
 	"github.com/joho/godotenv"
 
-	polymarketdataclient "github.com/ivanzzeth/polymarket-go-real-time-data-client"
+	polymarketrealtime "github.com/ivanzzeth/polymarket-go-real-time-data-client"
 )
 
 func main() {
@@ -38,17 +38,17 @@ func main() {
 		log.Fatal("API_PASSPHRASE not set in environment")
 	}
 
-	auth := &polymarketdataclient.ClobAuth{
+	auth := &polymarketrealtime.ClobAuth{
 		Key:        apiKey,
 		Secret:     secret,
 		Passphrase: passphrase,
 	}
 
 	// Create a message router for typed handling
-	router := polymarketdataclient.NewClobUserMessageRouter()
+	router := polymarketrealtime.NewClobUserMessageRouter()
 
 	// Register handlers for different event types
-	router.RegisterOrderHandler(func(order polymarketdataclient.CLOBOrder) error {
+	router.RegisterOrderHandler(func(order polymarketrealtime.CLOBOrder) error {
 		log.Printf("[Order Update] Type: %s, Status: %s, Market: %s, Side: %s, Price: %s, Size: %s/%s",
 			order.Type,
 			order.Status,
@@ -61,7 +61,7 @@ func main() {
 		return nil
 	})
 
-	router.RegisterTradeHandler(func(trade polymarketdataclient.CLOBTrade) error {
+	router.RegisterTradeHandler(func(trade polymarketrealtime.CLOBTrade) error {
 		log.Printf("[Trade Executed] Market: %s, Side: %s, Price: %s, Size: %s, Status: %s, TxHash: %s",
 			trade.Market,
 			trade.Side,
@@ -74,19 +74,19 @@ func main() {
 	})
 
 	// Create CLOB User client
-	client := polymarketdataclient.NewClobUserClient(
-		polymarketdataclient.WithLogger(polymarketdataclient.NewLogger()),
-		polymarketdataclient.WithAutoReconnect(true),
-		polymarketdataclient.WithOnConnect(func() {
+	client := polymarketrealtime.NewClobUserClient(
+		polymarketrealtime.WithLogger(polymarketrealtime.NewLogger()),
+		polymarketrealtime.WithAutoReconnect(true),
+		polymarketrealtime.WithOnConnect(func() {
 			log.Println("✅ Connected to CLOB User endpoint")
 		}),
-		polymarketdataclient.WithOnDisconnect(func(err error) {
+		polymarketrealtime.WithOnDisconnect(func(err error) {
 			log.Printf("❌ Disconnected from CLOB User endpoint: %v", err)
 		}),
-		polymarketdataclient.WithOnReconnect(func() {
+		polymarketrealtime.WithOnReconnect(func() {
 			log.Println("🔄 Reconnected to CLOB User endpoint")
 		}),
-		polymarketdataclient.WithOnNewMessage(func(data []byte) {
+		polymarketrealtime.WithOnNewMessage(func(data []byte) {
 			// Route message to appropriate handler
 			if err := router.RouteMessage(data); err != nil {
 				log.Printf("Error routing message: %v", err)
@@ -101,7 +101,7 @@ func main() {
 	}
 
 	// Create typed subscription handler
-	typedSub := polymarketdataclient.NewClobUserTypedSubscriptionHandler(client)
+	typedSub := polymarketrealtime.NewClobUserTypedSubscriptionHandler(client)
 
 	// Subscribe to user events for specific markets
 	// Replace with your actual market IDs

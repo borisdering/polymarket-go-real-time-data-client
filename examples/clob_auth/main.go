@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	polymarketdataclient "github.com/ivanzzeth/polymarket-go-real-time-data-client"
+	polymarketrealtime "github.com/ivanzzeth/polymarket-go-real-time-data-client"
 	"github.com/joho/godotenv"
 )
 
@@ -31,15 +31,15 @@ func main() {
 	}
 
 	// Create a new client with options
-	client := polymarketdataclient.New(
-		// polymarketdataclient.WithLogger(polymarketdataclient.NewLogger()),
-		polymarketdataclient.WithLogger(polymarketdataclient.NewSilentLogger()),
-		polymarketdataclient.WithOnConnect(func() {
+	client := polymarketrealtime.New(
+		// polymarketrealtime.WithLogger(polymarketrealtime.NewLogger()),
+		polymarketrealtime.WithLogger(polymarketrealtime.NewSilentLogger()),
+		polymarketrealtime.WithOnConnect(func() {
 			log.Println("Connected to Polymarket WebSocket!")
 		}),
-		polymarketdataclient.WithOnNewMessage(func(data []byte) {
+		polymarketrealtime.WithOnNewMessage(func(data []byte) {
 			log.Printf("Received raw message: %s\n", string(data))
-			var msg polymarketdataclient.Message
+			var msg polymarketrealtime.Message
 			err := json.Unmarshal(data, &msg)
 			if err != nil {
 				log.Printf("Invalid message %v received: %v", msg, err)
@@ -49,10 +49,10 @@ func main() {
 			// fmt.Printf("Received msg: %+v\n", msg)
 
 			switch msg.Topic {
-			case polymarketdataclient.TopicClobUser:
+			case polymarketrealtime.TopicClobUser:
 				switch msg.Type {
-				case polymarketdataclient.MessageTypeTrade:
-					var trade polymarketdataclient.CLOBTrade
+				case polymarketrealtime.MessageTypeTrade:
+					var trade polymarketrealtime.CLOBTrade
 					err = json.Unmarshal(msg.Payload, &trade)
 					if err != nil {
 						log.Printf("Invalid trade %v received: %v", msg.Payload, err)
@@ -61,7 +61,7 @@ func main() {
 
 					log.Printf("Trade: %+v\n", trade)
 				}
-			case polymarketdataclient.TopicComments:
+			case polymarketrealtime.TopicComments:
 				// TODO:
 			}
 		}),
@@ -73,11 +73,11 @@ func main() {
 	}
 
 	// Subscribe to market data
-	subscriptions := []polymarketdataclient.Subscription{
+	subscriptions := []polymarketrealtime.Subscription{
 		{
-			Topic: polymarketdataclient.TopicClobUser,
-			Type:  polymarketdataclient.MessageTypeAll,
-			ClobAuth: &polymarketdataclient.ClobAuth{
+			Topic: polymarketrealtime.TopicClobUser,
+			Type:  polymarketrealtime.MessageTypeAll,
+			ClobAuth: &polymarketrealtime.ClobAuth{
 				Key:        apiKeyStr,
 				Secret:     apiSecretyStr,
 				Passphrase: apiPassStr,

@@ -21,7 +21,7 @@ The typed subscription system provides two main components:
 ### 1. Create a Message Router
 
 ```go
-router := polymarketdataclient.NewTypedMessageRouter()
+router := polymarketrealtime.NewTypedMessageRouter()
 ```
 
 ### 2. Register Handlers
@@ -30,13 +30,13 @@ Register typed handlers for the message types you're interested in:
 
 ```go
 // Register a handler for CLOB trades
-router.RegisterCLOBTradeHandler(func(trade polymarketdataclient.CLOBTrade) error {
+router.RegisterCLOBTradeHandler(func(trade polymarketrealtime.CLOBTrade) error {
     log.Printf("Trade: %s at price %s", trade.ID, trade.Price.String())
     return nil
 })
 
 // Register a handler for activity trades
-router.RegisterActivityTradesHandler(func(trade polymarketdataclient.Trade) error {
+router.RegisterActivityTradesHandler(func(trade polymarketrealtime.Trade) error {
     log.Printf("Market: %s, Side: %s, Price: %s", trade.Slug, trade.Side, trade.Price.String())
     return nil
 })
@@ -47,11 +47,11 @@ router.RegisterActivityTradesHandler(func(trade polymarketdataclient.Trade) erro
 Create a client that routes messages through your router:
 
 ```go
-client := polymarketdataclient.New(
-    polymarketdataclient.WithOnConnect(func() {
+client := polymarketrealtime.New(
+    polymarketrealtime.WithOnConnect(func() {
         log.Println("Connected!")
     }),
-    polymarketdataclient.WithOnNewMessage(func(data []byte) {
+    polymarketrealtime.WithOnNewMessage(func(data []byte) {
         if err := router.RouteMessage(data); err != nil {
             log.Printf("Error: %v", err)
         }
@@ -64,10 +64,10 @@ client := polymarketdataclient.New(
 Use the typed subscription handler to subscribe:
 
 ```go
-typedSub := polymarketdataclient.NewTypedSubscriptionHandler(client)
+typedSub := polymarketrealtime.NewTypedSubscriptionHandler(client)
 
 // Subscribe to CLOB user trades (requires authentication)
-clobAuth := polymarketdataclient.ClobAuth{
+clobAuth := polymarketrealtime.ClobAuth{
     Key:        "your-api-key",
     Secret:     "your-api-secret",
     Passphrase: "your-passphrase",
@@ -86,7 +86,7 @@ typedSub.SubscribeToActivityTrades(callback, `{"event_slug":"presidential-electi
 
 Handler registration:
 ```go
-router.RegisterActivityTradesHandler(func(trade polymarketdataclient.Trade) error {
+router.RegisterActivityTradesHandler(func(trade polymarketrealtime.Trade) error {
     // Handle trade
     return nil
 })
@@ -99,7 +99,7 @@ typedSub.SubscribeToActivityOrdersMatched(callback, `{"market_slug":"your-market
 
 Handler registration:
 ```go
-router.RegisterActivityOrdersMatchedHandler(func(trade polymarketdataclient.Trade) error {
+router.RegisterActivityOrdersMatchedHandler(func(trade polymarketrealtime.Trade) error {
     // Handle matched order
     return nil
 })
@@ -114,7 +114,7 @@ typedSub.SubscribeToCommentCreated(callback, `{"parentEntityID":100,"parentEntit
 
 Handler registration:
 ```go
-router.RegisterCommentCreatedHandler(func(comment polymarketdataclient.Comment) error {
+router.RegisterCommentCreatedHandler(func(comment polymarketrealtime.Comment) error {
     // Handle new comment
     return nil
 })
@@ -143,7 +143,7 @@ typedSub.SubscribeToRFQRequestExpired(callback)
 
 Handler registration:
 ```go
-router.RegisterRFQRequestHandler(func(request polymarketdataclient.RFQRequest) error {
+router.RegisterRFQRequestHandler(func(request polymarketrealtime.RFQRequest) error {
     // Handle RFQ request
     return nil
 })
@@ -159,7 +159,7 @@ typedSub.SubscribeToRFQQuoteExpired(callback)
 
 Handler registration:
 ```go
-router.RegisterRFQQuoteHandler(func(quote polymarketdataclient.RFQQuote) error {
+router.RegisterRFQQuoteHandler(func(quote polymarketrealtime.RFQQuote) error {
     // Handle RFQ quote
     return nil
 })
@@ -178,7 +178,7 @@ typedSub.SubscribeToCryptoPricesChainlink(callback, `{"symbol":"ETHUSDT"}`)
 
 Handler registration:
 ```go
-router.RegisterCryptoPriceHandler(func(price polymarketdataclient.CryptoPrice) error {
+router.RegisterCryptoPriceHandler(func(price polymarketrealtime.CryptoPrice) error {
     log.Printf("Symbol: %s, Value: %s", price.Symbol, price.Value.String())
     return nil
 })
@@ -200,7 +200,7 @@ typedSub.SubscribeToEquityPrices(callback, `{"symbol":"AAPL"}`)
 
 Handler registration:
 ```go
-router.RegisterEquityPriceHandler(func(price polymarketdataclient.EquityPrice) error {
+router.RegisterEquityPriceHandler(func(price polymarketrealtime.EquityPrice) error {
     log.Printf("Symbol: %s, Value: %s", price.Symbol, price.Value.String())
     return nil
 })
@@ -213,7 +213,7 @@ Supported symbols:
 
 #### Subscribe to User Orders
 ```go
-clobAuth := polymarketdataclient.ClobAuth{
+clobAuth := polymarketrealtime.ClobAuth{
     Key:        "your-api-key",
     Secret:     "your-api-secret",
     Passphrase: "your-passphrase",
@@ -223,7 +223,7 @@ typedSub.SubscribeToCLOBUserOrders(clobAuth, callback)
 
 Handler registration:
 ```go
-router.RegisterCLOBOrderHandler(func(order polymarketdataclient.CLOBOrder) error {
+router.RegisterCLOBOrderHandler(func(order polymarketrealtime.CLOBOrder) error {
     log.Printf("Order: %s, Status: %s, Price: %s", order.ID, order.Status, order.Price.String())
     return nil
 })
@@ -236,7 +236,7 @@ typedSub.SubscribeToCLOBUserTrades(clobAuth, callback)
 
 Handler registration:
 ```go
-router.RegisterCLOBTradeHandler(func(trade polymarketdataclient.CLOBTrade) error {
+router.RegisterCLOBTradeHandler(func(trade polymarketrealtime.CLOBTrade) error {
     log.Printf("Trade: %s, Price: %s, Size: %s", trade.ID, trade.Price.String(), trade.Size.String())
     return nil
 })
@@ -257,7 +257,7 @@ typedSub.SubscribeToCLOBMarketPriceChanges(`["100","200"]`, callback)
 
 Handler registration:
 ```go
-router.RegisterPriceChangesHandler(func(changes polymarketdataclient.PriceChanges) error {
+router.RegisterPriceChangesHandler(func(changes polymarketrealtime.PriceChanges) error {
     for _, change := range changes.PriceChange {
         log.Printf("Asset: %s, Price: %s, BestBid: %s, BestAsk: %s",
             change.AssetID, change.Price.String(), change.BestBid.String(), change.BestAsk.String())
@@ -273,7 +273,7 @@ typedSub.SubscribeToCLOBMarketAggOrderbook(callback, `["100","200"]`)
 
 Handler registration:
 ```go
-router.RegisterAggOrderbookHandler(func(orderbook polymarketdataclient.AggOrderbook) error {
+router.RegisterAggOrderbookHandler(func(orderbook polymarketrealtime.AggOrderbook) error {
     log.Printf("Market: %s, Bids: %d, Asks: %d", orderbook.Market, len(orderbook.Bids), len(orderbook.Asks))
     return nil
 })
@@ -286,7 +286,7 @@ typedSub.SubscribeToCLOBMarketLastTradePrice(callback, `["100","200"]`)
 
 Handler registration:
 ```go
-router.RegisterLastTradePriceHandler(func(lastPrice polymarketdataclient.LastTradePrice) error {
+router.RegisterLastTradePriceHandler(func(lastPrice polymarketrealtime.LastTradePrice) error {
     log.Printf("Last price: %s for market %s", lastPrice.Price.String(), lastPrice.Market)
     return nil
 })
@@ -299,7 +299,7 @@ typedSub.SubscribeToCLOBMarketTickSizeChange(callback, `["100","200"]`)
 
 Handler registration:
 ```go
-router.RegisterTickSizeChangeHandler(func(change polymarketdataclient.TickSizeChange) error {
+router.RegisterTickSizeChangeHandler(func(change polymarketrealtime.TickSizeChange) error {
     log.Printf("Tick size changed from %s to %s", change.OldTickSize.String(), change.NewTickSize.String())
     return nil
 })
@@ -313,7 +313,7 @@ typedSub.SubscribeToCLOBMarketResolved(callback)
 
 Handler registration:
 ```go
-router.RegisterClobMarketHandler(func(market polymarketdataclient.ClobMarket) error {
+router.RegisterClobMarketHandler(func(market polymarketrealtime.ClobMarket) error {
     log.Printf("Market: %s, TickSize: %s, NegRisk: %v", market.Market, market.TickSize.String(), market.NegRisk)
     return nil
 })
@@ -328,27 +328,27 @@ import (
     "log"
     "time"
 
-    polymarketdataclient "github.com/ivanzzeth/polymarket-go-real-time-data-client"
+    polymarketrealtime "github.com/ivanzzeth/polymarket-go-real-time-data-client"
 )
 
 func main() {
     // Create router
-    router := polymarketdataclient.NewTypedMessageRouter()
+    router := polymarketrealtime.NewTypedMessageRouter()
 
     // Register handlers
-    router.RegisterCLOBTradeHandler(func(trade polymarketdataclient.CLOBTrade) error {
+    router.RegisterCLOBTradeHandler(func(trade polymarketrealtime.CLOBTrade) error {
         log.Printf("Trade: %s at %s", trade.ID, trade.Price.String())
         return nil
     })
 
-    router.RegisterActivityTradesHandler(func(trade polymarketdataclient.Trade) error {
+    router.RegisterActivityTradesHandler(func(trade polymarketrealtime.Trade) error {
         log.Printf("Activity: %s %s at %s", trade.Side, trade.Slug, trade.Price.String())
         return nil
     })
 
     // Create client
-    client := polymarketdataclient.New(
-        polymarketdataclient.WithOnNewMessage(func(data []byte) {
+    client := polymarketrealtime.New(
+        polymarketrealtime.WithOnNewMessage(func(data []byte) {
             router.RouteMessage(data)
         }),
     )
@@ -360,13 +360,13 @@ func main() {
     defer client.Disconnect()
 
     // Subscribe
-    typedSub := polymarketdataclient.NewTypedSubscriptionHandler(client)
+    typedSub := polymarketrealtime.NewTypedSubscriptionHandler(client)
 
     // Subscribe to activity trades
     typedSub.SubscribeToActivityTrades(nil)
 
     // Subscribe to CLOB user data (with auth)
-    clobAuth := polymarketdataclient.ClobAuth{
+    clobAuth := polymarketrealtime.ClobAuth{
         Key:        "your-key",
         Secret:     "your-secret",
         Passphrase: "your-passphrase",
@@ -383,7 +383,7 @@ func main() {
 Handlers should return an error if processing fails:
 
 ```go
-router.RegisterCLOBTradeHandler(func(trade polymarketdataclient.CLOBTrade) error {
+router.RegisterCLOBTradeHandler(func(trade polymarketrealtime.CLOBTrade) error {
     if err := processTradeInDatabase(trade); err != nil {
         return fmt.Errorf("failed to process trade: %w", err)
     }
@@ -397,18 +397,18 @@ You can register multiple handlers for the same message type:
 
 ```go
 // Handler 1: Log to console
-router.RegisterCLOBTradeHandler(func(trade polymarketdataclient.CLOBTrade) error {
+router.RegisterCLOBTradeHandler(func(trade polymarketrealtime.CLOBTrade) error {
     log.Printf("Trade received: %s", trade.ID)
     return nil
 })
 
 // Handler 2: Save to database
-router.RegisterCLOBTradeHandler(func(trade polymarketdataclient.CLOBTrade) error {
+router.RegisterCLOBTradeHandler(func(trade polymarketrealtime.CLOBTrade) error {
     return database.SaveTrade(trade)
 })
 
 // Handler 3: Send notification
-router.RegisterCLOBTradeHandler(func(trade polymarketdataclient.CLOBTrade) error {
+router.RegisterCLOBTradeHandler(func(trade polymarketrealtime.CLOBTrade) error {
     return notifier.SendTradeAlert(trade)
 })
 ```

@@ -7,7 +7,7 @@ import (
 	"syscall"
 	"time"
 
-	polymarketdataclient "github.com/ivanzzeth/polymarket-go-real-time-data-client"
+	polymarketrealtime "github.com/ivanzzeth/polymarket-go-real-time-data-client"
 	"github.com/joho/godotenv"
 )
 
@@ -18,61 +18,61 @@ func main() {
 	}
 
 	// Create a typed message router
-	router := polymarketdataclient.NewTypedMessageRouter()
+	router := polymarketrealtime.NewTypedMessageRouter()
 
 	// Register handlers for different message types
 
 	// 1. Activity Trades Handler
-	router.RegisterActivityTradesHandler(func(trade polymarketdataclient.Trade) error {
+	router.RegisterActivityTradesHandler(func(trade polymarketrealtime.Trade) error {
 		log.Printf("[Activity Trade] Market: %s, Side: %s, Price: %s, Size: %s",
 			trade.Slug, trade.Side, trade.Price.String(), trade.Size.String())
 		return nil
 	})
 
 	// 2. Activity Orders Matched Handler
-	router.RegisterActivityOrdersMatchedHandler(func(trade polymarketdataclient.Trade) error {
+	router.RegisterActivityOrdersMatchedHandler(func(trade polymarketrealtime.Trade) error {
 		log.Printf("[Orders Matched] Market: %s, Outcome: %s, Price: %s",
 			trade.Slug, trade.Outcome, trade.Price.String())
 		return nil
 	})
 
 	// 3. Comment Created Handler
-	router.RegisterCommentCreatedHandler(func(comment polymarketdataclient.Comment) error {
+	router.RegisterCommentCreatedHandler(func(comment polymarketrealtime.Comment) error {
 		log.Printf("[Comment Created] ID: %s, Body: %s, User: %s",
 			comment.ID, comment.Body, comment.UserAddress)
 		return nil
 	})
 
 	// 4. Crypto Price Handler
-	router.RegisterCryptoPriceHandler(func(price polymarketdataclient.CryptoPrice) error {
+	router.RegisterCryptoPriceHandler(func(price polymarketrealtime.CryptoPrice) error {
 		log.Printf("[Crypto Price] Symbol: %s, Value: %s, Time: %s",
 			price.Symbol, price.Value.String(), price.Time.Format("2006-01-02 15:04:05"))
 		return nil
 	})
 
 	// 5. Equity Price Handler
-	router.RegisterEquityPriceHandler(func(price polymarketdataclient.EquityPrice) error {
+	router.RegisterEquityPriceHandler(func(price polymarketrealtime.EquityPrice) error {
 		log.Printf("[Equity Price] Symbol: %s, Value: %s, Time: %s",
 			price.Symbol, price.Value.String(), price.Time.Format("2006-01-02 15:04:05"))
 		return nil
 	})
 
 	// 6. CLOB Order Handler (requires authentication)
-	router.RegisterCLOBOrderHandler(func(order polymarketdataclient.CLOBOrder) error {
+	router.RegisterCLOBOrderHandler(func(order polymarketrealtime.CLOBOrder) error {
 		log.Printf("[CLOB Order] ID: %s, Market: %s, Side: %s, Price: %s, Size: %s, Status: %s",
 			order.ID, order.Market, order.Side, order.Price.String(), order.OriginalSize.String(), order.Status)
 		return nil
 	})
 
 	// 7. CLOB Trade Handler (requires authentication)
-	router.RegisterCLOBTradeHandler(func(trade polymarketdataclient.CLOBTrade) error {
+	router.RegisterCLOBTradeHandler(func(trade polymarketrealtime.CLOBTrade) error {
 		log.Printf("[CLOB Trade] ID: %s, Market: %s, Side: %s, Price: %s, Size: %s, Status: %s",
 			trade.ID, trade.Market, trade.Side, trade.Price.String(), trade.Size.String(), trade.Status)
 		return nil
 	})
 
 	// 8. Price Changes Handler
-	router.RegisterPriceChangesHandler(func(changes polymarketdataclient.PriceChanges) error {
+	router.RegisterPriceChangesHandler(func(changes polymarketrealtime.PriceChanges) error {
 		log.Printf("[Price Changes] Market: %s, Changes: %d", changes.Market, len(changes.PriceChange))
 		for _, change := range changes.PriceChange {
 			log.Printf("  - Asset: %s, Price: %s, Side: %s, BestBid: %s, BestAsk: %s",
@@ -82,26 +82,26 @@ func main() {
 	})
 
 	// 9. Aggregated Orderbook Handler
-	router.RegisterAggOrderbookHandler(func(orderbook polymarketdataclient.AggOrderbook) error {
+	router.RegisterAggOrderbookHandler(func(orderbook polymarketrealtime.AggOrderbook) error {
 		log.Printf("[Agg Orderbook] Market: %s, Asset: %s, Bids: %d, Asks: %d",
 			orderbook.Market, orderbook.AssetID, len(orderbook.Bids), len(orderbook.Asks))
 		return nil
 	})
 
 	// 10. Last Trade Price Handler
-	router.RegisterLastTradePriceHandler(func(lastPrice polymarketdataclient.LastTradePrice) error {
+	router.RegisterLastTradePriceHandler(func(lastPrice polymarketrealtime.LastTradePrice) error {
 		log.Printf("[Last Trade Price] Market: %s, Asset: %s, Price: %s, Side: %s",
 			lastPrice.Market, lastPrice.AssetID, lastPrice.Price.String(), lastPrice.Side)
 		return nil
 	})
 
 	// Create the WebSocket client with the router
-	client := polymarketdataclient.New(
-		// polymarketdataclient.WithLogger(polymarketdataclient.NewLogger()),
-		polymarketdataclient.WithOnConnect(func() {
+	client := polymarketrealtime.New(
+		// polymarketrealtime.WithLogger(polymarketrealtime.NewLogger()),
+		polymarketrealtime.WithOnConnect(func() {
 			log.Println("Connected to Polymarket WebSocket!")
 		}),
-		polymarketdataclient.WithOnNewMessage(func(data []byte) {
+		polymarketrealtime.WithOnNewMessage(func(data []byte) {
 			// Route the message to the appropriate typed handler
 			if err := router.RouteMessage(data); err != nil {
 				log.Printf("Error routing message: %v", err)
@@ -115,7 +115,7 @@ func main() {
 	}
 
 	// Create typed subscription handler
-	typedSub := polymarketdataclient.NewTypedSubscriptionHandler(client)
+	typedSub := polymarketrealtime.NewTypedSubscriptionHandler(client)
 
 	// Example 1: Subscribe to activity trades for a specific market
 	// Filter by event_slug or market_slug
@@ -152,7 +152,7 @@ func main() {
 	apiPassphrase := os.Getenv("API_PASSPHRASE")
 
 	if apiKey != "" && apiSecret != "" && apiPassphrase != "" {
-		clobAuth := polymarketdataclient.ClobAuth{
+		clobAuth := polymarketrealtime.ClobAuth{
 			Key:        apiKey,
 			Secret:     apiSecret,
 			Passphrase: apiPassphrase,

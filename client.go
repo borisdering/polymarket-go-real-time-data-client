@@ -27,11 +27,17 @@ type Client interface {
 
 type client struct {
 	// User-provided options
-	logger            Logger
-	pingInterval      time.Duration
-	host              string
-	onConnectCallback func()
-	onNewMessage      func([]byte)
+	logger                Logger
+	pingInterval          time.Duration
+	host                  string
+	onConnectCallback     func()
+	onNewMessage          func([]byte)
+	autoReconnect         bool
+	maxReconnectAttempts  int
+	reconnectBackoffInit  time.Duration
+	reconnectBackoffMax   time.Duration
+	onDisconnectCallback  func(error)
+	onReconnectCallback   func()
 
 	// Internal struct to store the internal state of the client
 	internal struct {
@@ -40,18 +46,27 @@ type client struct {
 		mu         sync.RWMutex
 		done       chan struct{}
 		connClosed bool
+
+		// Reconnection state
+		reconnectAttempts int
+		subscriptions     []Subscription // Store subscriptions for restoration
+		isReconnecting    bool
 	}
 }
 
 func New(opts ...ClientOptions) Client {
 	c := &client{
 		internal: struct {
-			conn       *websocket.Conn
-			mu         sync.RWMutex
-			done       chan struct{}
-			connClosed bool
+			conn              *websocket.Conn
+			mu                sync.RWMutex
+			done              chan struct{}
+			connClosed        bool
+			reconnectAttempts int
+			subscriptions     []Subscription
+			isReconnecting    bool
 		}{
-			done: make(chan struct{}),
+			done:          make(chan struct{}),
+			subscriptions: make([]Subscription, 0),
 		},
 	}
 
@@ -72,8 +87,8 @@ func (c *client) Connect() error {
 	c.internal.mu.Lock()
 	defer c.internal.mu.Unlock()
 
-	// Check if the connection is closed
-	if c.internal.connClosed {
+	// Check if the connection is closed permanently (user called Disconnect)
+	if c.internal.connClosed && !c.internal.isReconnecting {
 		return fmt.Errorf("client is closed")
 	}
 
@@ -92,6 +107,12 @@ func (c *client) Connect() error {
 	}
 	c.internal.conn = conn
 
+	// Reset done channel if reconnecting
+	if c.internal.isReconnecting {
+		c.internal.done = make(chan struct{})
+		c.internal.connClosed = false
+	}
+
 	// Call the onConnectCallback if it is set
 	if c.onConnectCallback != nil {
 		c.onConnectCallback()
@@ -104,7 +125,7 @@ func (c *client) Connect() error {
 	return nil
 }
 
-// Disconnect closes the WebSocket connection
+// Disconnect closes the WebSocket connection and disables auto-reconnect
 func (c *client) Disconnect() error {
 	c.internal.mu.Lock()
 	defer c.internal.mu.Unlock()
@@ -118,6 +139,9 @@ func (c *client) Disconnect() error {
 	if c.internal.conn == nil {
 		return errors.New("connection is nil")
 	}
+
+	// Disable auto-reconnect when user explicitly disconnects
+	c.autoReconnect = false
 
 	// Update the flags first
 	c.internal.connClosed = true
@@ -162,12 +186,15 @@ type GammaAuth struct {
 
 // Subscribe sends a subscription message to the server
 func (c *client) Subscribe(subscriptions []Subscription) error {
-	c.internal.mu.RLock()
-	defer c.internal.mu.RUnlock()
+	c.internal.mu.Lock()
+	defer c.internal.mu.Unlock()
 
 	if c.internal.conn == nil {
 		return fmt.Errorf("not connected")
 	}
+
+	// Store subscriptions for reconnection
+	c.internal.subscriptions = append(c.internal.subscriptions, subscriptions...)
 
 	// Create the subscription message
 	subscribeMsg := subscriptionMessage{
@@ -258,7 +285,6 @@ func (c *client) sendPing() error {
 // readMessages handles incoming WebSocket messages
 func (c *client) readMessages() {
 	defer func() {
-		// No cleanup needed here since Disconnect() handles closing
 		c.logger.Debug("readMessages goroutine exiting")
 	}()
 
@@ -280,6 +306,17 @@ func (c *client) readMessages() {
 			messageType, messageBytes, err := conn.ReadMessage()
 			if err != nil {
 				c.logger.Error("read error: %v", err)
+
+				// Call disconnect callback
+				if c.onDisconnectCallback != nil {
+					c.onDisconnectCallback(err)
+				}
+
+				// Check if should reconnect
+				if c.autoReconnect && c.isRecoverableError(err) {
+					c.logger.Info("Connection lost, attempting to reconnect...")
+					go c.reconnect()
+				}
 				return
 			}
 			messageStr := string(messageBytes)

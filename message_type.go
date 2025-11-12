@@ -48,4 +48,31 @@ const (
 
 	// MessageTypeQuoteExpired is the type for quote expired
 	MessageTypeQuoteExpired MessageType = "quote_expired"
+
+	// MessageTypeUpdate is the type for price updates
+	MessageTypeUpdate MessageType = "update"
+
+	// MessageTypeOrder is the type for CLOB user orders
+	MessageTypeOrder MessageType = "order"
+
+	// MessageTypeTrade is the type for CLOB user trades
+	MessageTypeTrade MessageType = "trade"
+
+	// MessageTypePriceChange is the type for CLOB market price changes
+	MessageTypePriceChange MessageType = "price_change"
+
+	// MessageTypeAggOrderbook is the type for CLOB market aggregated orderbook
+	MessageTypeAggOrderbook MessageType = "agg_orderbook"
+
+	// MessageTypeLastTradePrice is the type for CLOB market last trade price
+	MessageTypeLastTradePrice MessageType = "last_trade_price"
+
+	// MessageTypeTickSizeChange is the type for CLOB market tick size changes
+	MessageTypeTickSizeChange MessageType = "tick_size_change"
+
+	// MessageTypeMarketCreated is the type for CLOB market creation
+	MessageTypeMarketCreated MessageType = "market_created"
+
+	// MessageTypeMarketResolved is the type for CLOB market resolution
+	MessageTypeMarketResolved MessageType = "market_resolved"
 )

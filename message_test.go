@@ -12,12 +12,12 @@ import (
 func TestMessage_MarshalJSON(t *testing.T) {
 	tests := []struct {
 		name     string
-		message  SubscriptionMessage
+		message  Message
 		expected string
 	}{
 		{
 			name: "marshal message with timestamp",
-			message: SubscriptionMessage{
+			message: Message{
 				ConnectionID: "conn123",
 				Timestamp:    1762928533586,
 				Time:         time.Unix(0, 1762928533586*int64(time.Millisecond)),
@@ -28,7 +28,7 @@ func TestMessage_MarshalJSON(t *testing.T) {
 		},
 		{
 			name: "marshal message with zero timestamp",
-			message: SubscriptionMessage{
+			message: Message{
 				ConnectionID: "conn456",
 				Timestamp:    0,
 				Time:         time.Time{},
@@ -52,12 +52,12 @@ func TestMessage_UnmarshalJSON(t *testing.T) {
 	tests := []struct {
 		name     string
 		jsonData string
-		expected SubscriptionMessage
+		expected Message
 	}{
 		{
 			name:     "unmarshal message with timestamp",
 			jsonData: `{"connection_id":"conn123","timestamp":1762928533586,"topic":"activity","type":"orders_matched"}`,
-			expected: SubscriptionMessage{
+			expected: Message{
 				ConnectionID: "conn123",
 				Timestamp:    1762928533586,
 				Time:         time.Unix(0, 1762928533586*int64(time.Millisecond)),
@@ -68,7 +68,7 @@ func TestMessage_UnmarshalJSON(t *testing.T) {
 		{
 			name:     "unmarshal message with zero timestamp",
 			jsonData: `{"connection_id":"conn456","timestamp":0,"topic":"comments","type":"comment_created"}`,
-			expected: SubscriptionMessage{
+			expected: Message{
 				ConnectionID: "conn456",
 				Timestamp:    0,
 				Time:         time.Time{},
@@ -79,7 +79,7 @@ func TestMessage_UnmarshalJSON(t *testing.T) {
 		{
 			name:     "unmarshal message with missing timestamp",
 			jsonData: `{"connection_id":"conn789","topic":"rfq","type":"request_created"}`,
-			expected: SubscriptionMessage{
+			expected: Message{
 				ConnectionID: "conn789",
 				Timestamp:    0,
 				Time:         time.Time{},
@@ -91,7 +91,7 @@ func TestMessage_UnmarshalJSON(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var message SubscriptionMessage
+			var message Message
 			err := json.Unmarshal([]byte(tt.jsonData), &message)
 			require.NoError(t, err)
 
@@ -131,7 +131,7 @@ func TestMessage_UnmarshalJSON_InvalidData(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var message SubscriptionMessage
+			var message Message
 			err := json.Unmarshal([]byte(tt.jsonData), &message)
 			assert.Error(t, err)
 		})
@@ -141,11 +141,11 @@ func TestMessage_UnmarshalJSON_InvalidData(t *testing.T) {
 func TestMessage_RoundTrip(t *testing.T) {
 	tests := []struct {
 		name    string
-		message SubscriptionMessage
+		message Message
 	}{
 		{
 			name: "round trip with timestamp",
-			message: SubscriptionMessage{
+			message: Message{
 				ConnectionID: "conn123",
 				Timestamp:    1762928533586,
 				Time:         time.Unix(0, 1762928533586*int64(time.Millisecond)),
@@ -155,7 +155,7 @@ func TestMessage_RoundTrip(t *testing.T) {
 		},
 		{
 			name: "round trip with zero timestamp",
-			message: SubscriptionMessage{
+			message: Message{
 				ConnectionID: "conn456",
 				Timestamp:    0,
 				Time:         time.Time{},
@@ -172,7 +172,7 @@ func TestMessage_RoundTrip(t *testing.T) {
 			require.NoError(t, err)
 
 			// Unmarshal the data back
-			var unmarshaledMessage SubscriptionMessage
+			var unmarshaledMessage Message
 			err = json.Unmarshal(data, &unmarshaledMessage)
 			require.NoError(t, err)
 

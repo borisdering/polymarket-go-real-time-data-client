@@ -10,7 +10,7 @@ import (
 //    "topic":"activity",
 //    "type":"orders_matched"
 
-type SubscriptionMessage struct {
+type Message struct {
 	ConnectionID string          `json:"connection_id"`
 	Timestamp    int64           `json:"timestamp"`
 	Time         time.Time       `json:"-"` // Parsed from timestamp
@@ -20,8 +20,8 @@ type SubscriptionMessage struct {
 }
 
 // MarshalJSON implements the json.Marshaler interface for Message
-func (m SubscriptionMessage) MarshalJSON() ([]byte, error) {
-	type Alias SubscriptionMessage
+func (m Message) MarshalJSON() ([]byte, error) {
+	type Alias Message
 	return json.Marshal(&struct {
 		*Alias
 	}{
@@ -30,8 +30,8 @@ func (m SubscriptionMessage) MarshalJSON() ([]byte, error) {
 }
 
 // UnmarshalJSON implements the json.Unmarshaler interface for Message
-func (m *SubscriptionMessage) UnmarshalJSON(data []byte) error {
-	type Alias SubscriptionMessage
+func (m *Message) UnmarshalJSON(data []byte) error {
+	type Alias Message
 	aux := &struct {
 		*Alias
 	}{

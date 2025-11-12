@@ -2,14 +2,34 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
+	"os"
 	"time"
 
 	polymarketdataclient "github.com/ivanzzeth/polymarket-go-real-time-data-client"
+	"github.com/joho/godotenv"
 )
 
 func main() {
+	if err := godotenv.Load(); err != nil {
+		log.Printf("Warning: Error loading .env file: %v", err)
+	}
+
+	apiKeyStr := os.Getenv("API_KEY")
+	if apiKeyStr == "" {
+		log.Fatal("API_KEY not set in environment")
+	}
+
+	apiSecretyStr := os.Getenv("API_SECRET")
+	if apiSecretyStr == "" {
+		log.Fatal("API_SECRET not set in environment")
+	}
+
+	apiPassStr := os.Getenv("API_PASSPHRASE")
+	if apiPassStr == "" {
+		log.Fatal("API_PASSPHRASE not set in environment")
+	}
+
 	// Create a new client with options
 	client := polymarketdataclient.New(
 		// polymarketdataclient.WithLogger(polymarketdataclient.NewLogger()),
@@ -18,8 +38,7 @@ func main() {
 			log.Println("Connected to Polymarket WebSocket!")
 		}),
 		polymarketdataclient.WithOnNewMessage(func(data []byte) {
-			// log.Printf("Received raw message: %s\n", string(data))
-
+			log.Printf("Received raw message: %s\n", string(data))
 			var msg polymarketdataclient.Message
 			err := json.Unmarshal(data, &msg)
 			if err != nil {
@@ -27,13 +46,13 @@ func main() {
 				return
 			}
 
-			// fmt.Printf("Received msg: %s\n", string(data))
+			// fmt.Printf("Received msg: %+v\n", msg)
 
 			switch msg.Topic {
-			case polymarketdataclient.TopicActivity:
+			case polymarketdataclient.TopicClobUser:
 				switch msg.Type {
-				case polymarketdataclient.MessageTypeTrades:
-					var trade polymarketdataclient.Trade
+				case polymarketdataclient.MessageTypeTrade:
+					var trade polymarketdataclient.CLOBTrade
 					err = json.Unmarshal(msg.Payload, &trade)
 					if err != nil {
 						log.Printf("Invalid trade %v received: %v", msg.Payload, err)
@@ -45,8 +64,6 @@ func main() {
 			case polymarketdataclient.TopicComments:
 				// TODO:
 			}
-
-			// Handle any further message processing. Can use the types in `payload.go` to unmarshal
 		}),
 	)
 
@@ -55,20 +72,16 @@ func main() {
 		panic(err)
 	}
 
-	// market you want to filter
-	event_slug := "btc-updown-15m-1762929900"
-
 	// Subscribe to market data
 	subscriptions := []polymarketdataclient.Subscription{
 		{
-			Topic: polymarketdataclient.TopicActivity,
-			// Type:  polymarketdataclient.MessageTypeAll,
-			Type:    polymarketdataclient.MessageTypeTrades,
-			Filters: fmt.Sprintf(`{"event_slug":"%s"}`, event_slug),
-		},
-		{
-			Topic: polymarketdataclient.TopicComments,
-			Type:  polymarketdataclient.MessageTypeCommentCreated,
+			Topic: polymarketdataclient.TopicClobUser,
+			Type:  polymarketdataclient.MessageTypeAll,
+			ClobAuth: &polymarketdataclient.ClobAuth{
+				Key:        apiKeyStr,
+				Secret:     apiSecretyStr,
+				Passphrase: apiPassStr,
+			},
 		},
 	}
 

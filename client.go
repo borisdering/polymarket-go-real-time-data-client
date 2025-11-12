@@ -139,13 +139,25 @@ func (c *client) Disconnect() error {
 type subscriptionMessage struct {
 	Action        string         `json:"action"`
 	Subscriptions []Subscription `json:"subscriptions"`
-
-	// TODO: Add optional clob_auth and gamma_auth
 }
+
 type Subscription struct {
 	Topic   Topic       `json:"topic"`
 	Type    MessageType `json:"type"`
 	Filters string      `json:"filters,omitempty"`
+
+	ClobAuth  *ClobAuth  `json:"clob_auth,omitempty"`
+	GammaAuth *GammaAuth `json:"gamma_auth,omitempty"`
+}
+
+type ClobAuth struct {
+	Key        string `json:"key"`
+	Secret     string `json:"secret"`
+	Passphrase string `json:"passphrase"`
+}
+
+type GammaAuth struct {
+	Address string `json:"address"`
 }
 
 // Subscribe sends a subscription message to the server

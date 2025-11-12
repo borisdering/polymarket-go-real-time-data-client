@@ -1,6 +1,11 @@
 package polymarketrealtime
 
-import "github.com/shopspring/decimal"
+import (
+	"encoding/json"
+	"time"
+
+	"github.com/shopspring/decimal"
+)
 
 // NOTE: This file is for the payloads that are sent by the server.
 // More info can be found here: https://github.com/Polymarket/real-time-data-client
@@ -23,9 +28,30 @@ type Trade struct {
 	Size            decimal.Decimal `json:"size"`            // Size of the trade
 	Status          TradeStatus     `json:"status"`          //Status of the match: e.g., MINED
 	Slug            string          `json:"slug"`            // Slug of the market
-	Timestamp       int64           `json:"timestamp"`       // Timestamp of the trade
+	Timestamp       int64           `json:"timestamp"`       // Timestamp of the trade (milliseconds)
+	Time            time.Time       `json:"-"`               // Parsed time from timestamp
 	Title           string          `json:"title"`           // Title of the event
 	TransactionHash string          `json:"transactionHash"` // Hash of the transaction
+}
+
+// UnmarshalJSON implements custom JSON unmarshaling for Trade
+func (t *Trade) UnmarshalJSON(data []byte) error {
+	type Alias Trade
+	aux := &struct {
+		*Alias
+	}{
+		Alias: (*Alias)(t),
+	}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+
+	// Parse timestamp to time.Time (milliseconds)
+	if t.Timestamp != 0 {
+		t.Time = time.UnixMilli(t.Timestamp)
+	}
+
+	return nil
 }
 
 type Side string
@@ -45,25 +71,25 @@ const (
 
 // Comment represents a comment on an event or series.
 type Comment struct {
-	ID               string  `json:"id"`               // Unique identifier of comment
-	Body             string  `json:"body"`             // Content of the comment
-	ParentEntityType string  `json:"parentEntityType"` // Type of the parent entity (Event or Series)
-	ParentEntityID   float64 `json:"parentEntityID"`   // ID of the parent entity
-	ParentCommentID  string  `json:"parentCommentID"`  // ID of the parent comment
-	UserAddress      string  `json:"userAddress"`      // Address of the user
-	ReplyAddress     string  `json:"replyAddress"`     // Address of the reply user
-	CreatedAt        string  `json:"createdAt"`        // Creation timestamp
-	UpdatedAt        string  `json:"updatedAt"`        // Last update timestamp
+	ID               string `json:"id"`               // Unique identifier of comment
+	Body             string `json:"body"`             // Content of the comment
+	ParentEntityType string `json:"parentEntityType"` // Type of the parent entity (Event or Series)
+	ParentEntityID   int64  `json:"parentEntityID"`   // ID of the parent entity (changed from float64 to int64)
+	ParentCommentID  string `json:"parentCommentID"`  // ID of the parent comment
+	UserAddress      string `json:"userAddress"`      // Address of the user
+	ReplyAddress     string `json:"replyAddress"`     // Address of the reply user
+	CreatedAt        string `json:"createdAt"`        // Creation timestamp
+	UpdatedAt        string `json:"updatedAt"`        // Last update timestamp
 }
 
 // Reaction represents a reaction to a comment.
 type Reaction struct {
-	ID           string  `json:"id"`           // Unique identifier of reaction
-	CommentID    float64 `json:"commentID"`    // ID of the comment
-	ReactionType string  `json:"reactionType"` // Type of the reaction
-	Icon         string  `json:"icon"`         // Icon representing the reaction
-	UserAddress  string  `json:"userAddress"`  // Address of the user
-	CreatedAt    string  `json:"createdAt"`    // Creation timestamp
+	ID           string `json:"id"`           // Unique identifier of reaction
+	CommentID    int64  `json:"commentID"`    // ID of the comment (changed from float64 to int64)
+	ReactionType string `json:"reactionType"` // Type of the reaction
+	Icon         string `json:"icon"`         // Icon representing the reaction
+	UserAddress  string `json:"userAddress"`  // Address of the user
+	CreatedAt    string `json:"createdAt"`    // Creation timestamp
 }
 
 // RFQRequest represents a request to trade a conditional token.
@@ -74,11 +100,32 @@ type RFQRequest struct {
 	Token        string          `json:"token"`        // ERC1155 token ID of conditional token being traded
 	Complement   string          `json:"complement"`   // Complement ERC1155 token ID of conditional token being traded
 	State        string          `json:"state"`        // Current state of the request
-	Side         string          `json:"side"`         // Indicates buy or sell side
+	Side         Side            `json:"side"`         // Indicates buy or sell side
 	SizeIn       decimal.Decimal `json:"sizeIn"`       // Input size of the request
 	SizeOut      decimal.Decimal `json:"sizeOut"`      // Output size of the request
 	Price        decimal.Decimal `json:"price"`        // Price from in/out sizes
-	Expiry       int64           `json:"expiry"`       // Expiry timestamp (UNIX format)
+	Expiry       int64           `json:"expiry"`       // Expiry timestamp (UNIX format, seconds)
+	ExpiryTime   time.Time       `json:"-"`            // Parsed expiry time
+}
+
+// UnmarshalJSON implements custom JSON unmarshaling for RFQRequest
+func (r *RFQRequest) UnmarshalJSON(data []byte) error {
+	type Alias RFQRequest
+	aux := &struct {
+		*Alias
+	}{
+		Alias: (*Alias)(r),
+	}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+
+	// Parse expiry to time.Time (seconds)
+	if r.Expiry != 0 {
+		r.ExpiryTime = time.Unix(r.Expiry, 0)
+	}
+
+	return nil
 }
 
 // RFQQuote represents a response to a trade request.
@@ -88,26 +135,89 @@ type RFQQuote struct {
 	ProxyAddress string          `json:"proxyAddress"` // User proxy address
 	Token        string          `json:"token"`        // ERC1155 token ID of conditional token being traded
 	State        string          `json:"state"`        // Current state of the quote
-	Side         string          `json:"side"`         // Indicates buy or sell side
+	Side         Side            `json:"side"`         // Indicates buy or sell side
 	SizeIn       decimal.Decimal `json:"sizeIn"`       // Input size of the quote
 	SizeOut      decimal.Decimal `json:"sizeOut"`      // Output size of the quote
 	Condition    string          `json:"condition"`    // ID of market which is also the CTF condition ID
 	Complement   string          `json:"complement"`   // Complement ERC1155 token ID of conditional token being traded
-	Expiry       int64           `json:"expiry"`       // Expiry timestamp (UNIX format)
+	Expiry       int64           `json:"expiry"`       // Expiry timestamp (UNIX format, seconds)
+	ExpiryTime   time.Time       `json:"-"`            // Parsed expiry time
+}
+
+// UnmarshalJSON implements custom JSON unmarshaling for RFQQuote
+func (q *RFQQuote) UnmarshalJSON(data []byte) error {
+	type Alias RFQQuote
+	aux := &struct {
+		*Alias
+	}{
+		Alias: (*Alias)(q),
+	}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+
+	// Parse expiry to time.Time (seconds)
+	if q.Expiry != 0 {
+		q.ExpiryTime = time.Unix(q.Expiry, 0)
+	}
+
+	return nil
 }
 
 // CryptoPrice represents a cryptocurrency price update.
 type CryptoPrice struct {
 	Symbol    string          `json:"symbol"`    // Symbol of the asset
 	Timestamp int64           `json:"timestamp"` // Timestamp in milliseconds for the update
+	Time      time.Time       `json:"-"`         // Parsed time from timestamp
 	Value     decimal.Decimal `json:"value"`     // Value at the time of update
+}
+
+// UnmarshalJSON implements custom JSON unmarshaling for CryptoPrice
+func (c *CryptoPrice) UnmarshalJSON(data []byte) error {
+	type Alias CryptoPrice
+	aux := &struct {
+		*Alias
+	}{
+		Alias: (*Alias)(c),
+	}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+
+	// Parse timestamp to time.Time (milliseconds)
+	if c.Timestamp != 0 {
+		c.Time = time.UnixMilli(c.Timestamp)
+	}
+
+	return nil
 }
 
 // EquityPrice represents an equity price update.
 type EquityPrice struct {
 	Symbol    string          `json:"symbol"`    // Symbol of the asset
 	Timestamp int64           `json:"timestamp"` // Timestamp in milliseconds for the update
+	Time      time.Time       `json:"-"`         // Parsed time from timestamp
 	Value     decimal.Decimal `json:"value"`     // Value at the time of update
+}
+
+// UnmarshalJSON implements custom JSON unmarshaling for EquityPrice
+func (e *EquityPrice) UnmarshalJSON(data []byte) error {
+	type Alias EquityPrice
+	aux := &struct {
+		*Alias
+	}{
+		Alias: (*Alias)(e),
+	}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+
+	// Parse timestamp to time.Time (milliseconds)
+	if e.Timestamp != 0 {
+		e.Time = time.UnixMilli(e.Timestamp)
+	}
+
+	return nil
 }
 
 // CLOBOrder represents a CLOB user order.
@@ -123,7 +233,7 @@ type CLOBOrder struct {
 	Outcome      string          `json:"outcome"`       // Order outcome: YES / NO
 	Owner        string          `json:"owner"`         // UUID of the order owner
 	Price        decimal.Decimal `json:"price"`         // Order price (e.g., in decimals like 0.5)
-	Side         string          `json:"side"`          // Side of the trade: BUY or SELL
+	Side         Side            `json:"side"`          // Side of the trade: BUY or SELL
 	SizeMatched  decimal.Decimal `json:"size_matched"`  // Amount of order that has been matched
 	Status       string          `json:"status"`        // Status of the order (e.g., MATCHED)
 	Type         string          `json:"type"`          // Type of update: PLACEMENT, CANCELLATION, FILL, etc.
@@ -159,7 +269,7 @@ type CLOBMakerOrder struct {
 	Outcome       string          `json:"outcome"`        // Outcome targeted by the maker's order (YES / NO)
 	Owner         string          `json:"owner"`          // UUID of the maker
 	Price         decimal.Decimal `json:"price"`          // Order price
-	Side          string          `json:"side"`           // Side of the maker: BUY or SELL
+	Side          Side            `json:"side"`           // Side of the maker: BUY or SELL
 }
 
 // PriceChanges represents CLOB market price changes.
@@ -174,7 +284,7 @@ type PriceChange struct {
 	AssetID string          `json:"a"`  // Asset identifier
 	Hash    string          `json:"h"`  // Unique hash ID of the book snapshot
 	Price   decimal.Decimal `json:"p"`  // Price quoted (e.g., 0.5)
-	Side    string          `json:"s"`  // Side of the quote: BUY or SELL
+	Side    Side            `json:"s"`  // Side of the quote: BUY or SELL
 	Size    decimal.Decimal `json:"si"` // Size or volume available at the quoted price (e.g., 0, 100)
 	BestAsk decimal.Decimal `json:"ba"` // Best ask price
 	BestBid decimal.Decimal `json:"bb"` // Best bid price
@@ -205,7 +315,7 @@ type LastTradePrice struct {
 	FeeRateBps decimal.Decimal `json:"fee_rate_bps"` // Fee rate in basis points (bps)
 	Market     string          `json:"market"`       // Market or condition ID
 	Price      decimal.Decimal `json:"price"`        // Trade price (e.g., 0.5)
-	Side       string          `json:"side"`         // Side of the order: BUY or SELL
+	Side       Side            `json:"side"`         // Side of the order: BUY or SELL
 	Size       decimal.Decimal `json:"size"`         // Size of the trade
 }
 

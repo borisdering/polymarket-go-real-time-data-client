@@ -45,15 +45,15 @@ func main() {
 
 	// 4. Crypto Price Handler
 	router.RegisterCryptoPriceHandler(func(price polymarketdataclient.CryptoPrice) error {
-		log.Printf("[Crypto Price] Symbol: %s, Value: %s, Time: %d",
-			price.Symbol, price.Value.String(), price.Timestamp)
+		log.Printf("[Crypto Price] Symbol: %s, Value: %s, Time: %s",
+			price.Symbol, price.Value.String(), price.Time.Format("2006-01-02 15:04:05"))
 		return nil
 	})
 
 	// 5. Equity Price Handler
 	router.RegisterEquityPriceHandler(func(price polymarketdataclient.EquityPrice) error {
-		log.Printf("[Equity Price] Symbol: %s, Value: %s, Time: %d",
-			price.Symbol, price.Value.String(), price.Timestamp)
+		log.Printf("[Equity Price] Symbol: %s, Value: %s, Time: %s",
+			price.Symbol, price.Value.String(), price.Time.Format("2006-01-02 15:04:05"))
 		return nil
 	})
 

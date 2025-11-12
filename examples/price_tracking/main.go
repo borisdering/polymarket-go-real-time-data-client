@@ -15,19 +15,19 @@ func main() {
 
 	// Track crypto prices
 	router.RegisterCryptoPriceHandler(func(price polymarketdataclient.CryptoPrice) error {
-		log.Printf("[Crypto] %s = $%s (timestamp: %d)",
+		log.Printf("[Crypto] %s = $%s (time: %s)",
 			price.Symbol,
 			price.Value.String(),
-			price.Timestamp)
+			price.Time.Format("15:04:05.000"))
 		return nil
 	})
 
 	// Track equity prices
 	router.RegisterEquityPriceHandler(func(price polymarketdataclient.EquityPrice) error {
-		log.Printf("[Equity] %s = $%s (timestamp: %d)",
+		log.Printf("[Equity] %s = $%s (time: %s)",
 			price.Symbol,
 			price.Value.String(),
-			price.Timestamp)
+			price.Time.Format("15:04:05.000"))
 		return nil
 	})
 
@@ -79,9 +79,9 @@ func main() {
 		}
 	}
 
-	log.Println("\n=== Price Tracking Started ===")
+	log.Println("=== Price Tracking Started ===")
 	log.Println("Monitoring crypto and equity prices...")
-	log.Println("Press Ctrl+C to exit\n")
+	log.Println("Press Ctrl+C to exit")
 
 	// Wait for interrupt signal
 	sigChan := make(chan os.Signal, 1)

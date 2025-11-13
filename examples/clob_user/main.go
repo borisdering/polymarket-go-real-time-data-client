@@ -38,43 +38,14 @@ func main() {
 		log.Fatal("API_PASSPHRASE not set in environment")
 	}
 
-	auth := &polymarketrealtime.ClobAuth{
+	auth := polymarketrealtime.ClobAuth{
 		Key:        apiKey,
 		Secret:     secret,
 		Passphrase: passphrase,
 	}
 
-	// Create a message router for typed handling
-	router := polymarketrealtime.NewClobUserMessageRouter()
-
-	// Register handlers for different event types
-	router.RegisterOrderHandler(func(order polymarketrealtime.CLOBOrder) error {
-		log.Printf("[Order Update] Type: %s, Status: %s, Market: %s, Side: %s, Price: %s, Size: %s/%s",
-			order.Type,
-			order.Status,
-			order.Market,
-			order.Side,
-			order.Price.String(),
-			order.SizeMatched.String(),
-			order.OriginalSize.String(),
-		)
-		return nil
-	})
-
-	router.RegisterTradeHandler(func(trade polymarketrealtime.CLOBTrade) error {
-		log.Printf("[Trade Executed] Market: %s, Side: %s, Price: %s, Size: %s, Status: %s, TxHash: %s",
-			trade.Market,
-			trade.Side,
-			trade.Price.String(),
-			trade.Size.String(),
-			trade.Status,
-			trade.TransactionHash,
-		)
-		return nil
-	})
-
-	// Create CLOB User client
-	client := polymarketrealtime.NewClobUserClient(
+	// Create typed subscription handler with client
+	typedSub, client := polymarketrealtime.NewRealtimeTypedSubscriptionHandlerWithOptions(
 		polymarketrealtime.WithLogger(polymarketrealtime.NewLogger()),
 		polymarketrealtime.WithAutoReconnect(true),
 		polymarketrealtime.WithOnConnect(func() {
@@ -86,12 +57,6 @@ func main() {
 		polymarketrealtime.WithOnReconnect(func() {
 			log.Println("🔄 Reconnected to CLOB User endpoint")
 		}),
-		polymarketrealtime.WithOnNewMessage(func(data []byte) {
-			// Route message to appropriate handler
-			if err := router.RouteMessage(data); err != nil {
-				log.Printf("Error routing message: %v", err)
-			}
-		}),
 	)
 
 	// Connect to the server
@@ -100,27 +65,40 @@ func main() {
 		log.Fatalf("Failed to connect: %v", err)
 	}
 
-	// Create typed subscription handler
-	typedSub := polymarketrealtime.NewClobUserTypedSubscriptionHandler(client)
+	log.Println("Subscribing to user orders and trades...")
 
-	// Subscribe to user events for specific markets
-	// Replace with your actual market IDs
-	markets := []string{
-		// Example market IDs - replace with real ones
-		// "0x1234567890abcdef...",
-		"0xae29d682edf60b00fe19ae6bd5b88ebdb2ac16a2107c0ef3661fa4cb3da0a973",
+	// Subscribe to user orders
+	if err := typedSub.SubscribeToCLOBUserOrders(auth, func(order polymarketrealtime.CLOBOrder) error {
+		log.Printf("[Order Update] Type: %s, Status: %s, Market: %s, Side: %s, Price: %s, Size: %s/%s",
+			order.Type,
+			order.Status,
+			order.Market,
+			order.Side,
+			order.Price.String(),
+			order.SizeMatched.String(),
+			order.OriginalSize.String(),
+		)
+		return nil
+	}); err != nil {
+		log.Fatalf("Failed to subscribe to orders: %v", err)
 	}
 
-	if len(markets) > 0 {
-		log.Println("Subscribing to user orders and trades...")
-		if err := typedSub.SubscribeToAllUserEvents(markets, auth); err != nil {
-			log.Fatalf("Failed to subscribe: %v", err)
-		}
-		log.Println("✅ Successfully subscribed to user events")
-	} else {
-		log.Println("⚠️  No markets specified. Add market IDs to the 'markets' slice to receive updates.")
-		log.Println("   You can find market IDs at https://clob.polymarket.com/")
+	// Subscribe to user trades
+	if err := typedSub.SubscribeToCLOBUserTrades(auth, func(trade polymarketrealtime.CLOBTrade) error {
+		log.Printf("[Trade Executed] Market: %s, Side: %s, Price: %s, Size: %s, Status: %s, TxHash: %s",
+			trade.Market,
+			trade.Side,
+			trade.Price.String(),
+			trade.Size.String(),
+			trade.Status,
+			trade.TransactionHash,
+		)
+		return nil
+	}); err != nil {
+		log.Fatalf("Failed to subscribe to trades: %v", err)
 	}
+
+	log.Println("✅ Successfully subscribed to user events")
 
 	log.Println()
 	log.Println("=== Listening for User Events ===")

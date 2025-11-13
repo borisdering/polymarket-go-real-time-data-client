@@ -10,77 +10,35 @@ import (
 )
 
 func main() {
-	log.Println("=== Dual Client Demo: Real-Time Data + CLOB Market ===")
-	log.Println("This example demonstrates using both endpoints simultaneously")
+	log.Println("=== Multi-Topic Demo: Real-Time Data + CLOB Market ===")
+	log.Println("This example demonstrates subscribing to multiple topics simultaneously")
 	log.Println()
 
-	// ========== Real-Time Data Client ==========
-	log.Println("Setting up Real-Time Data client...")
+	// ========== Create Unified Client ==========
+	log.Println("Setting up unified client...")
 
-	realtimeRouter := polymarketdataclient.NewRealtimeMessageRouter()
-
-	realtimeRouter.RegisterCryptoPriceHandler(func(price polymarketdataclient.CryptoPrice) error {
-		log.Printf("[Real-Time] Crypto Price: %s = $%s", price.Symbol, price.Value.String())
-		return nil
-	})
-
-	realtimeClient := polymarketdataclient.New(
+	typedSub, client := polymarketdataclient.NewRealtimeTypedSubscriptionHandlerWithOptions(
 		polymarketdataclient.WithLogger(polymarketdataclient.NewSilentLogger()),
 		polymarketdataclient.WithAutoReconnect(true),
 		polymarketdataclient.WithOnConnect(func() {
-			log.Println("✅ Connected to Real-Time Data endpoint")
-		}),
-		polymarketdataclient.WithOnNewMessage(func(data []byte) {
-			realtimeRouter.RouteMessage(data)
+			log.Println("✅ Connected to WebSocket")
 		}),
 	)
 
-	// ========== CLOB Market Client ==========
-	log.Println("Setting up CLOB Market client...")
-
-	clobRouter := polymarketdataclient.NewClobMarketMessageRouter()
-
-	clobRouter.RegisterPriceChangesHandler(func(priceChanges polymarketdataclient.PriceChanges) error {
-		log.Printf("[CLOB Market] Price Changes: Market %s, %d changes", priceChanges.Market, len(priceChanges.PriceChange))
-		return nil
-	})
-
-	clobRouter.RegisterOrderbookHandler(func(orderbook polymarketdataclient.AggOrderbook) error {
-		log.Printf("[CLOB Market] Orderbook: Asset %s, Bids: %d, Asks: %d",
-			orderbook.AssetID, len(orderbook.Bids), len(orderbook.Asks))
-		return nil
-	})
-
-	clobClient := polymarketdataclient.NewClobMarketClient(
-		polymarketdataclient.WithLogger(polymarketdataclient.NewSilentLogger()),
-		polymarketdataclient.WithAutoReconnect(true),
-		polymarketdataclient.WithOnConnect(func() {
-			log.Println("✅ Connected to CLOB Market endpoint")
-		}),
-		polymarketdataclient.WithOnNewMessage(func(data []byte) {
-			clobRouter.RouteMessage(data)
-		}),
-	)
-
-	// ========== Connect Both Clients ==========
-	log.Println("\nConnecting to both endpoints...")
-
-	// Connect to Real-Time Data
-	if err := realtimeClient.Connect(); err != nil {
-		log.Fatalf("Failed to connect to Real-Time Data: %v", err)
-	}
-
-	// Connect to CLOB Market
-	if err := clobClient.Connect(); err != nil {
-		log.Fatalf("Failed to connect to CLOB Market: %v", err)
+	// Connect to the server
+	log.Println("Connecting to WebSocket...")
+	if err := client.Connect(); err != nil {
+		log.Fatalf("Failed to connect: %v", err)
 	}
 
 	// ========== Subscribe to Data ==========
-	log.Println("\nSubscing to data streams...")
+	log.Println("\nSubscribing to data streams...")
 
 	// Subscribe to Bitcoin price updates
-	realtimeTypedSub := polymarketdataclient.NewRealtimeTypedSubscriptionHandler(realtimeClient)
-	if err := realtimeTypedSub.SubscribeToCryptoPrices(nil, polymarketdataclient.NewBTCPriceFilter()); err != nil {
+	if err := typedSub.SubscribeToCryptoPrices(func(price polymarketdataclient.CryptoPrice) error {
+		log.Printf("[Crypto] Price: %s = $%s", price.Symbol, price.Value.String())
+		return nil
+	}, polymarketdataclient.NewBTCPriceFilter()); err != nil {
 		log.Printf("Warning: Failed to subscribe to crypto prices: %v", err)
 	} else {
 		log.Println("✅ Subscribed to BTC price updates")
@@ -94,9 +52,25 @@ func main() {
 	}
 
 	if len(assetIDs) > 0 {
-		clobTypedSub := polymarketdataclient.NewClobMarketTypedSubscriptionHandler(clobClient)
-		if err := clobTypedSub.SubscribeToAllMarketData(assetIDs); err != nil {
-			log.Printf("Warning: Failed to subscribe to CLOB market data: %v", err)
+		filter := &polymarketdataclient.CLOBMarketFilter{
+			TokenIDs: assetIDs,
+		}
+
+		// Subscribe to price changes
+		if err := typedSub.SubscribeToCLOBMarketPriceChanges(filter, func(priceChanges polymarketdataclient.PriceChanges) error {
+			log.Printf("[CLOB] Price Changes: Market %s, %d changes", priceChanges.Market, len(priceChanges.PriceChange))
+			return nil
+		}); err != nil {
+			log.Printf("Warning: Failed to subscribe to price changes: %v", err)
+		}
+
+		// Subscribe to orderbook
+		if err := typedSub.SubscribeToCLOBMarketAggOrderbook(filter, func(orderbook polymarketdataclient.AggOrderbook) error {
+			log.Printf("[CLOB] Orderbook: Asset %s, Bids: %d, Asks: %d",
+				orderbook.AssetID, len(orderbook.Bids), len(orderbook.Asks))
+			return nil
+		}); err != nil {
+			log.Printf("Warning: Failed to subscribe to orderbook: %v", err)
 		} else {
 			log.Println("✅ Subscribed to CLOB market data")
 		}
@@ -106,13 +80,13 @@ func main() {
 
 	// ========== Listen for Data ==========
 	log.Println()
-	log.Println("=== Dual Client Active ===")
-	log.Println("Receiving data from both endpoints:")
-	log.Println("  1. Real-Time Data: Crypto prices, activity, comments, etc.")
-	log.Println("  2. CLOB Market: Orderbook updates, price changes, trades")
+	log.Println("=== Multi-Topic Client Active ===")
+	log.Println("Receiving data from multiple topics:")
+	log.Println("  1. Crypto Prices: Bitcoin and other cryptocurrencies")
+	log.Println("  2. CLOB Market: Orderbook updates, price changes")
 	log.Println()
 	log.Println("This demonstrates how you can combine multiple data sources")
-	log.Println("for comprehensive market intelligence!")
+	log.Println("in a single WebSocket connection!")
 	log.Println()
 	log.Println("Press Ctrl+C to exit")
 	log.Println()
@@ -123,15 +97,11 @@ func main() {
 	<-sigChan
 
 	// ========== Shutdown ==========
-	log.Println("\n\nShutting down both clients...")
+	log.Println("\n\nShutting down client...")
 
-	if err := realtimeClient.Disconnect(); err != nil {
-		log.Printf("Error disconnecting Real-Time client: %v", err)
+	if err := client.Disconnect(); err != nil {
+		log.Printf("Error disconnecting client: %v", err)
 	}
 
-	if err := clobClient.Disconnect(); err != nil {
-		log.Printf("Error disconnecting CLOB client: %v", err)
-	}
-
-	log.Println("✅ All clients disconnected successfully")
+	log.Println("✅ Client disconnected successfully")
 }

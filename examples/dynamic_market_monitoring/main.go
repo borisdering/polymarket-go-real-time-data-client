@@ -13,15 +13,15 @@ import (
 
 // MarketMonitor manages dynamic subscriptions for markets
 type MarketMonitor struct {
-	client              *polymarketdataclient.ClobMarketClient
-	typedSub            *polymarketdataclient.ClobMarketTypedSubscriptionHandler
+	client              polymarketdataclient.Client
+	typedSub            *polymarketdataclient.RealtimeTypedSubscriptionHandler
 	activeMarkets       map[string]bool // market ID -> active status
 	marketSubscriptions map[string][]polymarketdataclient.Subscription
 	mu                  sync.RWMutex
 }
 
 // NewMarketMonitor creates a new market monitor
-func NewMarketMonitor(client *polymarketdataclient.ClobMarketClient, typedSub *polymarketdataclient.ClobMarketTypedSubscriptionHandler) *MarketMonitor {
+func NewMarketMonitor(client polymarketdataclient.Client, typedSub *polymarketdataclient.RealtimeTypedSubscriptionHandler) *MarketMonitor {
 	return &MarketMonitor{
 		client:              client,
 		typedSub:            typedSub,
@@ -50,22 +50,27 @@ func (m *MarketMonitor) OnMarketCreated(market polymarketdataclient.ClobMarket) 
 	// Subscribe to all market data for this market
 	log.Printf("📡 Subscribing to market data for market: %s", marketID)
 
+	// Create filter for CLOB market subscriptions
+	filter := &polymarketdataclient.CLOBMarketFilter{
+		TokenIDs: market.AssetIDs,
+	}
+
 	// Subscribe to price changes
-	if err := m.typedSub.SubscribeToPriceChanges(market.AssetIDs); err != nil {
+	if err := m.typedSub.SubscribeToCLOBMarketPriceChanges(filter, nil); err != nil {
 		log.Printf("❌ Failed to subscribe to price changes: %v", err)
 		return err
 	}
 	log.Printf("  ✅ Subscribed to price changes")
 
 	// Subscribe to orderbook updates
-	if err := m.typedSub.SubscribeToOrderbook(market.AssetIDs); err != nil {
+	if err := m.typedSub.SubscribeToCLOBMarketAggOrderbook(filter, nil); err != nil {
 		log.Printf("❌ Failed to subscribe to orderbook: %v", err)
 		return err
 	}
 	log.Printf("  ✅ Subscribed to orderbook updates")
 
 	// Subscribe to last trade prices
-	if err := m.typedSub.SubscribeToLastTradePrices(market.AssetIDs); err != nil {
+	if err := m.typedSub.SubscribeToCLOBMarketLastTradePrice(filter, nil); err != nil {
 		log.Printf("❌ Failed to subscribe to last trade prices: %v", err)
 		return err
 	}
@@ -185,16 +190,29 @@ func main() {
 	log.Println("and dynamically managing subscriptions based on market lifecycle")
 	log.Println()
 
-	// Create message router
-	router := polymarketdataclient.NewClobMarketMessageRouter()
-
 	// Track message counts
 	var priceChangeCount, orderbookCount, lastTradeCount int
 	var mu sync.Mutex
 
 	var monitor *MarketMonitor
 
-	// Register handlers for market data
+	// Create typed subscription handler with client
+	typedSub, client := polymarketdataclient.NewRealtimeTypedSubscriptionHandlerWithOptions(
+		// polymarketdataclient.WithLogger(polymarketdataclient.NewLogger()),
+		polymarketdataclient.WithAutoReconnect(true),
+		polymarketdataclient.WithOnConnect(func() {
+			log.Println("✅ Connected to CLOB Market WebSocket")
+		}),
+		polymarketdataclient.WithOnDisconnect(func(err error) {
+			log.Printf("❌ Disconnected: %v", err)
+		}),
+		polymarketdataclient.WithOnReconnect(func() {
+			log.Println("🔄 Reconnected successfully")
+		}),
+	)
+
+	// Register handlers for market data using the router
+	router := typedSub.GetRouter()
 	router.RegisterPriceChangesHandler(func(priceChanges polymarketdataclient.PriceChanges) error {
 		mu.Lock()
 		priceChangeCount++
@@ -209,7 +227,7 @@ func main() {
 		return nil
 	})
 
-	router.RegisterOrderbookHandler(func(orderbook polymarketdataclient.AggOrderbook) error {
+	router.RegisterAggOrderbookHandler(func(orderbook polymarketdataclient.AggOrderbook) error {
 		mu.Lock()
 		orderbookCount++
 		count := orderbookCount
@@ -231,34 +249,11 @@ func main() {
 		return nil
 	})
 
-	// Create client for market data
-	client := polymarketdataclient.NewClobMarketClient(
-		// polymarketdataclient.WithLogger(polymarketdataclient.NewLogger()),
-		polymarketdataclient.WithAutoReconnect(true),
-		polymarketdataclient.WithOnConnect(func() {
-			log.Println("✅ Connected to CLOB Market WebSocket")
-		}),
-		polymarketdataclient.WithOnDisconnect(func(err error) {
-			log.Printf("❌ Disconnected: %v", err)
-		}),
-		polymarketdataclient.WithOnReconnect(func() {
-			log.Println("🔄 Reconnected successfully")
-		}),
-		polymarketdataclient.WithOnNewMessage(func(data []byte) {
-			if err := router.RouteMessage(data); err != nil {
-				log.Printf("⚠️ Error routing message: %v", err)
-			}
-		}),
-	)
-
 	// Connect to the server
 	log.Println("Connecting to CLOB Market WebSocket...")
 	if err := client.Connect(); err != nil {
 		log.Fatalf("Failed to connect: %v", err)
 	}
-
-	// Create typed subscription handler
-	typedSub := polymarketdataclient.NewClobMarketTypedSubscriptionHandler(client)
 
 	// Create market monitor
 	monitor = NewMarketMonitor(client, typedSub)

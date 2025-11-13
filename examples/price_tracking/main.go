@@ -22,29 +22,11 @@ func main() {
 	// Symbol to monitor (change this to monitor different symbols)
 	symbolToMonitor := "solusdt" // Options: btcusdt, ethusdt, solusdt, etc.
 
-	// Create a typed message router
-	router := polymarketdataclient.NewRealtimeMessageRouter()
-
-	// Track crypto prices
-	router.RegisterCryptoPriceHandler(func(price polymarketdataclient.CryptoPrice) error {
-		log.Printf("[Crypto] %s = $%s (time: %s)",
-			price.Symbol,
-			price.Value.String(),
-			price.Time.Format("15:04:05.000"))
-		return nil
-	})
-
 	// Create the WebSocket client
 	client := polymarketdataclient.New(
-		polymarketdataclient.WithLogger(polymarketdataclient.NewLogger()),
+		// polymarketdataclient.WithLogger(polymarketdataclient.NewLogger()),
 		polymarketdataclient.WithOnConnect(func() {
 			log.Println("✓ Connected to Polymarket WebSocket!")
-		}),
-		polymarketdataclient.WithOnNewMessage(func(data []byte) {
-			// Route the message to the appropriate typed handler
-			if err := router.RouteMessage(data); err != nil {
-				log.Printf("Error routing message: %v", err)
-			}
 		}),
 	)
 
@@ -55,12 +37,15 @@ func main() {
 	}
 	defer client.Disconnect()
 
-	// Create typed subscription handler
-	typedSub := polymarketdataclient.NewRealtimeTypedSubscriptionHandler(client)
-
-	// Subscribe to a single crypto price
+	// Subscribe to a single crypto price with callback
 	filter := polymarketdataclient.NewCryptoPriceFilter(symbolToMonitor)
-	if err := typedSub.SubscribeToCryptoPrices(nil, filter); err != nil {
+	if err := client.SubscribeToCryptoPrices(func(price polymarketdataclient.CryptoPrice) error {
+		log.Printf("[Crypto] %s = $%s (time: %s)",
+			price.Symbol,
+			price.Value.String(),
+			price.Time.Format("15:04:05.000"))
+		return nil
+	}, filter); err != nil {
 		log.Fatalf("Failed to subscribe to %s: %v", symbolToMonitor, err)
 	}
 	log.Printf("✓ Subscribed to %s\n", symbolToMonitor)

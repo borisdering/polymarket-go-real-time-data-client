@@ -1,3 +1,4 @@
+//go:build integration
 // +build integration
 
 package polymarketrealtime
@@ -35,7 +36,7 @@ func TestIntegrationRealConnection(t *testing.T) {
 			mu.Unlock()
 			t.Logf("❌ Disconnected: %v", err)
 		}),
-		WithOnNewMessage(func(data []byte) {
+		withOnNewMessage(func(data []byte) {
 			mu.Lock()
 			messagesReceived = append(messagesReceived, data)
 			mu.Unlock()
@@ -133,7 +134,7 @@ func TestIntegrationMultipleSubscriptionsSameTopic(t *testing.T) {
 	client := New(
 		WithLogger(NewLogger()),
 		WithAutoReconnect(false),
-		WithOnNewMessage(func(data []byte) {
+		withOnNewMessage(func(data []byte) {
 			mu.Lock()
 			messagesReceived = append(messagesReceived, data)
 			mu.Unlock()
@@ -207,7 +208,7 @@ func TestIntegrationMultipleTopics(t *testing.T) {
 	client := New(
 		WithLogger(NewLogger()),
 		WithAutoReconnect(false),
-		WithOnNewMessage(func(data []byte) {
+		withOnNewMessage(func(data []byte) {
 			if err := router.RouteMessage(data); err != nil {
 				t.Logf("⚠️ Error routing message: %v", err)
 			}
@@ -282,7 +283,7 @@ func TestIntegrationCLOBMarketSubscription(t *testing.T) {
 		WithOnConnect(func() {
 			t.Log("✅ Connected to CLOB WebSocket")
 		}),
-		WithOnNewMessage(func(data []byte) {
+		withOnNewMessage(func(data []byte) {
 			if err := router.RouteMessage(data); err != nil {
 				t.Logf("⚠️ Error routing message: %v", err)
 			}
@@ -331,7 +332,7 @@ func TestIntegrationResubscribeAfterUnsubscribe(t *testing.T) {
 	client := New(
 		WithLogger(NewLogger()),
 		WithAutoReconnect(false),
-		WithOnNewMessage(func(data []byte) {
+		withOnNewMessage(func(data []byte) {
 			mu.Lock()
 			switch phase {
 			case 1:
@@ -431,7 +432,7 @@ func TestIntegrationConcurrentSubscriptions(t *testing.T) {
 	client := New(
 		WithLogger(NewLogger()),
 		WithAutoReconnect(false),
-		WithOnNewMessage(func(data []byte) {
+		withOnNewMessage(func(data []byte) {
 			mu.Lock()
 			totalMessages++
 			mu.Unlock()

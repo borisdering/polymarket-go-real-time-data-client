@@ -13,18 +13,16 @@ import (
 
 // MarketMonitor manages dynamic subscriptions for markets
 type MarketMonitor struct {
-	client              polymarketdataclient.WsClient
-	typedSub            *polymarketdataclient.RealtimeTypedSubscriptionHandler
+	client              *polymarketdataclient.Client
 	activeMarkets       map[string]bool // market ID -> active status
 	marketSubscriptions map[string][]polymarketdataclient.Subscription
 	mu                  sync.RWMutex
 }
 
 // NewMarketMonitor creates a new market monitor
-func NewMarketMonitor(client polymarketdataclient.WsClient, typedSub *polymarketdataclient.RealtimeTypedSubscriptionHandler) *MarketMonitor {
+func NewMarketMonitor(client *polymarketdataclient.Client) *MarketMonitor {
 	return &MarketMonitor{
 		client:              client,
-		typedSub:            typedSub,
 		activeMarkets:       make(map[string]bool),
 		marketSubscriptions: make(map[string][]polymarketdataclient.Subscription),
 	}
@@ -56,21 +54,21 @@ func (m *MarketMonitor) OnMarketCreated(market polymarketdataclient.ClobMarket) 
 	}
 
 	// Subscribe to price changes
-	if err := m.typedSub.SubscribeToCLOBMarketPriceChanges(filter, nil); err != nil {
+	if err := m.client.SubscribeToCLOBMarketPriceChanges(filter, nil); err != nil {
 		log.Printf("❌ Failed to subscribe to price changes: %v", err)
 		return err
 	}
 	log.Printf("  ✅ Subscribed to price changes")
 
 	// Subscribe to orderbook updates
-	if err := m.typedSub.SubscribeToCLOBMarketAggOrderbook(filter, nil); err != nil {
+	if err := m.client.SubscribeToCLOBMarketAggOrderbook(filter, nil); err != nil {
 		log.Printf("❌ Failed to subscribe to orderbook: %v", err)
 		return err
 	}
 	log.Printf("  ✅ Subscribed to orderbook updates")
 
 	// Subscribe to last trade prices
-	if err := m.typedSub.SubscribeToCLOBMarketLastTradePrice(filter, nil); err != nil {
+	if err := m.client.SubscribeToCLOBMarketLastTradePrice(filter, nil); err != nil {
 		log.Printf("❌ Failed to subscribe to last trade prices: %v", err)
 		return err
 	}
@@ -196,23 +194,8 @@ func main() {
 
 	var monitor *MarketMonitor
 
-	// Create typed subscription handler with client
-	typedSub, client := polymarketdataclient.NewRealtimeTypedSubscriptionHandlerWithOptions(
-		// polymarketdataclient.WithLogger(polymarketdataclient.NewLogger()),
-		polymarketdataclient.WithAutoReconnect(true),
-		polymarketdataclient.WithOnConnect(func() {
-			log.Println("✅ Connected to CLOB Market WebSocket")
-		}),
-		polymarketdataclient.WithOnDisconnect(func(err error) {
-			log.Printf("❌ Disconnected: %v", err)
-		}),
-		polymarketdataclient.WithOnReconnect(func() {
-			log.Println("🔄 Reconnected successfully")
-		}),
-	)
-
-	// Register handlers for market data using the router
-	router := typedSub.GetRouter()
+	// Create message router for market data
+	router := polymarketdataclient.NewRealtimeMessageRouter()
 	router.RegisterPriceChangesHandler(func(priceChanges polymarketdataclient.PriceChanges) error {
 		mu.Lock()
 		priceChangeCount++
@@ -249,6 +232,21 @@ func main() {
 		return nil
 	})
 
+	// Create client
+	client := polymarketdataclient.New(
+		// polymarketdataclient.WithLogger(polymarketdataclient.NewLogger()),
+		polymarketdataclient.WithAutoReconnect(true),
+		polymarketdataclient.WithOnConnect(func() {
+			log.Println("✅ Connected to CLOB Market WebSocket")
+		}),
+		polymarketdataclient.WithOnDisconnect(func(err error) {
+			log.Printf("❌ Disconnected: %v", err)
+		}),
+		polymarketdataclient.WithOnReconnect(func() {
+			log.Println("🔄 Reconnected successfully")
+		}),
+	)
+
 	// Connect to the server
 	log.Println("Connecting to CLOB Market WebSocket...")
 	if err := client.Connect(); err != nil {
@@ -256,7 +254,7 @@ func main() {
 	}
 
 	// Create market monitor
-	monitor = NewMarketMonitor(client, typedSub)
+	monitor = NewMarketMonitor(client)
 
 	// Create router for lifecycle events
 	lifecycleRouter := polymarketdataclient.NewRealtimeMessageRouter()
@@ -275,11 +273,6 @@ func main() {
 		// polymarketdataclient.WithHost("wss://ws-subscriptions-clob.polymarket.com/ws/market"),
 		polymarketdataclient.WithLogger(polymarketdataclient.NewLogger()),
 		polymarketdataclient.WithAutoReconnect(true),
-		polymarketdataclient.WithOnNewMessage(func(data []byte) {
-			if err := lifecycleRouter.RouteMessage(data); err != nil {
-				log.Printf("⚠️ Error routing lifecycle message: %v", err)
-			}
-		}),
 	)
 
 	// Connect the lifecycle client
@@ -287,17 +280,15 @@ func main() {
 		log.Fatalf("Failed to connect lifecycle client: %v", err)
 	}
 
-	lifecycleTypedSub := polymarketdataclient.NewRealtimeTypedSubscriptionHandler(lifecycleClient)
-
 	// Subscribe to market lifecycle events
 	log.Println("📡 Subscribing to market lifecycle events...")
 
-	if err := lifecycleTypedSub.SubscribeToCLOBMarketCreated(monitor.OnMarketCreated); err != nil {
+	if err := lifecycleClient.SubscribeToCLOBMarketCreated(monitor.OnMarketCreated); err != nil {
 		log.Fatalf("Failed to subscribe to market created events: %v", err)
 	}
 	log.Println("✅ Subscribed to market_created events")
 
-	if err := lifecycleTypedSub.SubscribeToCLOBMarketResolved(monitor.OnMarketResolved); err != nil {
+	if err := lifecycleClient.SubscribeToCLOBMarketResolved(monitor.OnMarketResolved); err != nil {
 		log.Fatalf("Failed to subscribe to market resolved events: %v", err)
 	}
 	log.Println("✅ Subscribed to market_resolved events")

@@ -1,3 +1,4 @@
+//go:build integration
 // +build integration
 
 package polymarketrealtime
@@ -35,7 +36,7 @@ func TestBaseClientSingleSubscription(t *testing.T) {
 		WithOnConnect(func() {
 			t.Log("✓ Connected")
 		}),
-		WithOnNewMessage(func(data []byte) {
+		withOnNewMessage(func(data []byte) {
 			if err := router.RouteMessage(data); err != nil {
 				t.Logf("Error routing: %v", err)
 			}
@@ -103,7 +104,7 @@ func TestBaseClientSequentialSubscriptions(t *testing.T) {
 		WithOnConnect(func() {
 			t.Log("✓ Connected")
 		}),
-		WithOnNewMessage(func(data []byte) {
+		withOnNewMessage(func(data []byte) {
 			if err := router.RouteMessage(data); err != nil {
 				t.Logf("Error routing: %v", err)
 			}
@@ -197,7 +198,7 @@ func TestBaseClientBatchSubscription(t *testing.T) {
 		WithOnConnect(func() {
 			t.Log("✓ Connected")
 		}),
-		WithOnNewMessage(func(data []byte) {
+		withOnNewMessage(func(data []byte) {
 			if err := router.RouteMessage(data); err != nil {
 				t.Logf("Error routing: %v", err)
 			}
@@ -289,7 +290,7 @@ func TestBaseClientUnsubscribe(t *testing.T) {
 		WithOnConnect(func() {
 			t.Log("✓ Connected")
 		}),
-		WithOnNewMessage(func(data []byte) {
+		withOnNewMessage(func(data []byte) {
 			if err := router.RouteMessage(data); err != nil {
 				t.Logf("Error routing: %v", err)
 			}

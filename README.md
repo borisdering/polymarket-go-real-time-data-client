@@ -35,7 +35,7 @@ func main() {
 		polymarketrealtime.WithOnConnect(func() {
 			fmt.Println("Connected to Polymarket WebSocket!")
 		}),
-		polymarketrealtime.WithOnNewMessage(func(data []byte) {
+		polymarketrealtime.withOnNewMessage(func(data []byte) {
 			// log.Printf("Received raw message: %s\n", string(data))
 
 			var msg polymarketrealtime.SubscriptionMessage
@@ -107,7 +107,7 @@ func main() {
 - `WithPingInterval(duration)` - Set ping interval (default: 5s)
 - `WithHost(host)` - Set WebSocket host (default: wss://ws-live-data.polymarket.com)
 - `WithOnConnect(callback)` - Set connection callback
-- `WithOnNewMessage(callback)` - Set message received callback
+- `withOnNewMessage(callback)` - Set message received callback
 
 ### Topics
 

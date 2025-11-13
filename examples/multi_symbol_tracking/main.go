@@ -37,25 +37,6 @@ func main() {
 		go func() {
 			defer wg.Done()
 
-			// Create a message router for this symbol
-			router := polymarketdataclient.NewRealtimeMessageRouter()
-
-			// Register handler for this symbol
-			router.RegisterCryptoPriceHandler(func(price polymarketdataclient.CryptoPrice) error {
-				// Increment message count
-				count := 1
-				if val, ok := messageCount.Load(symbol); ok {
-					count = val.(int) + 1
-				}
-				messageCount.Store(symbol, count)
-
-				log.Printf("[%s] Price: $%s (update #%d)",
-					price.Symbol,
-					price.Value.String(),
-					count)
-				return nil
-			})
-
 			// Create dedicated client for this symbol
 			client := polymarketdataclient.New(
 				// polymarketdataclient.WithLogger(polymarketdataclient.NewLogger()),
@@ -65,11 +46,6 @@ func main() {
 				polymarketdataclient.WithOnDisconnect(func(err error) {
 					if err != nil {
 						log.Printf("✗ [%s] Disconnected: %v", symbol, err)
-					}
-				}),
-				polymarketdataclient.WithOnNewMessage(func(data []byte) {
-					if err := router.RouteMessage(data); err != nil {
-						log.Printf("⚠️ [%s] Error routing message: %v", symbol, err)
 					}
 				}),
 			)
@@ -84,12 +60,22 @@ func main() {
 			// Store client for cleanup
 			clients = append(clients, client)
 
-			// Create typed subscription handler
-			typedSub := polymarketdataclient.NewRealtimeTypedSubscriptionHandler(client)
-
 			// Subscribe to this specific symbol
 			filter := polymarketdataclient.NewCryptoPriceFilter(symbol)
-			if err := typedSub.SubscribeToCryptoPrices(nil, filter); err != nil {
+			if err := client.SubscribeToCryptoPrices(func(price polymarketdataclient.CryptoPrice) error {
+				// Increment message count
+				count := 1
+				if val, ok := messageCount.Load(symbol); ok {
+					count = val.(int) + 1
+				}
+				messageCount.Store(symbol, count)
+
+				log.Printf("[%s] Price: $%s (update #%d)",
+					price.Symbol,
+					price.Value.String(),
+					count)
+				return nil
+			}, filter); err != nil {
 				log.Printf("Failed to subscribe to [%s]: %v", symbol, err)
 				client.Disconnect()
 				return

@@ -34,7 +34,7 @@ func main() {
 	// Create client with reconnection enabled
 	client := polymarketdataclient.New(
 		// Enable detailed logging to see reconnection attempts
-		polymarketdataclient.WithLogger(polymarketdataclient.NewLogger()),
+		// polymarketdataclient.WithLogger(polymarketdataclient.NewLogger()),
 
 		// Configure reconnection behavior
 		polymarketdataclient.WithAutoReconnect(true),
@@ -67,11 +67,6 @@ func main() {
 			log.Printf("🔄 Reconnection successful (count: %d)", reconnectCount)
 			log.Println("   Subscriptions have been restored")
 		}),
-
-		// Message callback
-		polymarketdataclient.WithOnNewMessage(func(data []byte) {
-			router.RouteMessage(data)
-		}),
 	)
 
 	// Connect to the server
@@ -80,12 +75,9 @@ func main() {
 		log.Fatalf("Failed to connect: %v", err)
 	}
 
-	// Create typed subscription handler
-	typedSub := polymarketdataclient.NewRealtimeTypedSubscriptionHandler(client)
-
 	// Subscribe to Bitcoin price
 	log.Println("Subscribing to BTC price updates...")
-	if err := typedSub.SubscribeToCryptoPrices(nil, polymarketdataclient.NewBTCPriceFilter()); err != nil {
+	if err := client.SubscribeToCryptoPrices(nil, polymarketdataclient.NewBTCPriceFilter()); err != nil {
 		log.Printf("Failed to subscribe: %v", err)
 	} else {
 		log.Println("✅ Successfully subscribed to BTC prices")

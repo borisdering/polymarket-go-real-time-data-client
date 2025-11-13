@@ -14,9 +14,9 @@ func main() {
 	log.Println("This example demonstrates subscribing to CLOB market data")
 	log.Println()
 
-	// Create typed subscription handler with client
-	typedSub, client := polymarketrealtime.NewRealtimeTypedSubscriptionHandlerWithOptions(
-		polymarketrealtime.WithLogger(polymarketrealtime.NewLogger()),
+	// Create client
+	client := polymarketrealtime.New(
+		// polymarketrealtime.WithLogger(polymarketrealtime.NewLogger()),
 		polymarketrealtime.WithAutoReconnect(true),
 		polymarketrealtime.WithOnConnect(func() {
 			log.Println("✅ Connected to CLOB Market endpoint")
@@ -40,7 +40,7 @@ func main() {
 	assetIDs := []string{
 		// Example asset IDs - replace with real ones
 		// You can find asset IDs at https://clob.polymarket.com/
-		"17123485321386672176776734800460321083207167824796999887262322064541574251437",
+		"20244656410496119633637176580888572822795336808693757973566456523317429619143",
 	}
 
 	if len(assetIDs) > 0 {
@@ -52,7 +52,7 @@ func main() {
 		}
 
 		// Subscribe to orderbook updates
-		if err := typedSub.SubscribeToCLOBMarketAggOrderbook(filter, func(orderbook polymarketrealtime.AggOrderbook) error {
+		if err := client.SubscribeToCLOBMarketAggOrderbook(filter, func(orderbook polymarketrealtime.AggOrderbook) error {
 			log.Printf("[Orderbook Update] Asset: %s, Market: %s, Bids: %d levels, Asks: %d levels",
 				orderbook.AssetID,
 				orderbook.Market,
@@ -74,7 +74,7 @@ func main() {
 		}
 
 		// Subscribe to price changes
-		if err := typedSub.SubscribeToCLOBMarketPriceChanges(filter, func(priceChanges polymarketrealtime.PriceChanges) error {
+		if err := client.SubscribeToCLOBMarketPriceChanges(filter, func(priceChanges polymarketrealtime.PriceChanges) error {
 			log.Printf("[Price Changes] Market: %s, Changes: %d", priceChanges.Market, len(priceChanges.PriceChange))
 
 			for _, change := range priceChanges.PriceChange {
@@ -94,7 +94,7 @@ func main() {
 		}
 
 		// Subscribe to last trade prices
-		if err := typedSub.SubscribeToCLOBMarketLastTradePrice(filter, func(lastPrice polymarketrealtime.LastTradePrice) error {
+		if err := client.SubscribeToCLOBMarketLastTradePrice(filter, func(lastPrice polymarketrealtime.LastTradePrice) error {
 			log.Printf("[Last Trade Price] Asset: %s, Market: %s, Side: %s, Price: %s, Size: %s",
 				lastPrice.AssetID,
 				lastPrice.Market,

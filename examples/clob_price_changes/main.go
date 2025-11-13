@@ -63,12 +63,6 @@ func main() {
 		polymarketdataclient.WithOnReconnect(func() {
 			log.Println("🔄 Reconnected successfully")
 		}),
-		polymarketdataclient.WithOnNewMessage(func(data []byte) {
-			// Route message to appropriate handler
-			if err := router.RouteMessage(data); err != nil {
-				log.Printf("Error routing message: %v", err)
-			}
-		}),
 	)
 
 	// Connect to the server
@@ -76,9 +70,6 @@ func main() {
 	if err := client.Connect(); err != nil {
 		log.Fatalf("Failed to connect: %v", err)
 	}
-
-	// Create typed subscription handler
-	typedSub := polymarketdataclient.NewRealtimeTypedSubscriptionHandler(client)
 
 	// Subscribe to price changes for specific token IDs
 	// You can find token IDs on https://clob.polymarket.com/
@@ -91,7 +82,7 @@ func main() {
 	log.Printf("Token IDs: %v", tokenIDs)
 
 	filter := polymarketdataclient.NewCLOBMarketFilter(tokenIDs...)
-	if err := typedSub.SubscribeToCLOBMarketPriceChanges(filter, nil); err != nil {
+	if err := client.SubscribeToCLOBMarketPriceChanges(filter, nil); err != nil {
 		log.Fatalf("Failed to subscribe: %v", err)
 	}
 

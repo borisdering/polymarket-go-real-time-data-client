@@ -44,8 +44,8 @@ func main() {
 		Passphrase: passphrase,
 	}
 
-	// Create typed subscription handler with client
-	typedSub, client := polymarketrealtime.NewRealtimeTypedSubscriptionHandlerWithOptions(
+	// Create client
+	client := polymarketrealtime.New(
 		polymarketrealtime.WithLogger(polymarketrealtime.NewLogger()),
 		polymarketrealtime.WithAutoReconnect(true),
 		polymarketrealtime.WithOnConnect(func() {
@@ -68,7 +68,7 @@ func main() {
 	log.Println("Subscribing to user orders and trades...")
 
 	// Subscribe to user orders
-	if err := typedSub.SubscribeToCLOBUserOrders(auth, func(order polymarketrealtime.CLOBOrder) error {
+	if err := client.SubscribeToCLOBUserOrders(auth, func(order polymarketrealtime.CLOBOrder) error {
 		log.Printf("[Order Update] Type: %s, Status: %s, Market: %s, Side: %s, Price: %s, Size: %s/%s",
 			order.Type,
 			order.Status,
@@ -84,7 +84,7 @@ func main() {
 	}
 
 	// Subscribe to user trades
-	if err := typedSub.SubscribeToCLOBUserTrades(auth, func(trade polymarketrealtime.CLOBTrade) error {
+	if err := client.SubscribeToCLOBUserTrades(auth, func(trade polymarketrealtime.CLOBTrade) error {
 		log.Printf("[Trade Executed] Market: %s, Side: %s, Price: %s, Size: %s, Status: %s, TxHash: %s",
 			trade.Market,
 			trade.Side,

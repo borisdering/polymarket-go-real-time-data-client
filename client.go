@@ -49,10 +49,13 @@ type Client struct {
 // This provides backward compatibility while using the improved baseClient implementation
 func New(opts ...ClientOptions) *Client {
 	protocol := NewRealtimeProtocol()
+
+	router := NewRealtimeMessageRouter()
+	opts = append(opts, withRouter(router))
 	base := newBaseClient(protocol, opts...)
 	cli := &Client{baseClient: base}
 
-	handler := NewRealtimeTypedSubscriptionHandler(cli)
+	handler := NewRealtimeTypedSubscriptionHandler(cli, router)
 
 	cli.RealtimeTypedSubscriptionHandler = handler
 	return cli

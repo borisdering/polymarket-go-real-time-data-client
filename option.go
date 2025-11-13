@@ -57,7 +57,7 @@ func WithOnConnect(f func()) ClientOptions {
 	}
 }
 
-func WithOnNewMessage(f func([]byte)) ClientOptions {
+func withOnNewMessage(f func([]byte)) ClientOptions {
 	return func(c *Config) {
 		c.OnNewMessage = f
 	}
@@ -105,8 +105,8 @@ type MessageRouter interface {
 	RouteMessage(data []byte) error
 }
 
-// WithRouter sets a message router that will automatically route all incoming messages
-// This eliminates the need to manually call router.RouteMessage() in WithOnNewMessage
+// withRouter sets a message router that will automatically route all incoming messages
+// This eliminates the need to manually call router.RouteMessage() in withOnNewMessage
 //
 // Example usage:
 //
@@ -116,7 +116,7 @@ type MessageRouter interface {
 //	    polymarketrealtime.WithLogger(polymarketrealtime.NewLogger()),
 //	)
 //	typedSub.SetClient(client)
-func WithRouter(router MessageRouter) ClientOptions {
+func withRouter(router MessageRouter) ClientOptions {
 	return func(c *Config) {
 		if router != nil {
 			// Wrap the existing OnNewMessage callback

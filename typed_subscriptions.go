@@ -16,27 +16,11 @@ type RealtimeTypedSubscriptionHandler struct {
 
 // NewRealtimeTypedSubscriptionHandler creates a new typed subscription handler for real-time data
 // The client parameter can be nil and set later using SetClient()
-func NewRealtimeTypedSubscriptionHandler(client WsClient) *RealtimeTypedSubscriptionHandler {
+func NewRealtimeTypedSubscriptionHandler(client WsClient, router *RealtimeMessageRouter) *RealtimeTypedSubscriptionHandler {
 	return &RealtimeTypedSubscriptionHandler{
 		client: client,
-		router: NewRealtimeMessageRouter(),
+		router: router,
 	}
-}
-
-// NewRealtimeTypedSubscriptionHandlerWithOptions creates a handler and client together
-// This is the recommended way to create a handler as it automatically configures the router
-func NewRealtimeTypedSubscriptionHandlerWithOptions(opts ...ClientOptions) (*RealtimeTypedSubscriptionHandler, WsClient) {
-	handler := &RealtimeTypedSubscriptionHandler{
-		router: NewRealtimeMessageRouter(),
-	}
-
-	// Prepend WithRouter to options so messages are automatically routed
-	allOpts := append([]ClientOptions{WithRouter(handler.router)}, opts...)
-
-	client := New(allOpts...)
-	handler.client = client
-
-	return handler, client
 }
 
 // GetRouter returns the internal message router
@@ -449,6 +433,11 @@ func (h *RealtimeTypedSubscriptionHandler) SubscribeToCryptoPrices(callback Cryp
 		return fmt.Errorf("filter is required for crypto price subscription")
 	}
 
+	// Register callback to internal router if provided
+	if callback != nil {
+		h.router.RegisterCryptoPriceHandler(callback)
+	}
+
 	filterStr, err := filter.ToJSON()
 	if err != nil {
 		return fmt.Errorf("failed to convert filter to JSON: %w", err)
@@ -472,6 +461,11 @@ func (h *RealtimeTypedSubscriptionHandler) SubscribeToCryptoPrices(callback Cryp
 func (h *RealtimeTypedSubscriptionHandler) SubscribeToCryptoPricesChainlink(callback CryptoPriceCallback, filter *CryptoPriceFilter) error {
 	if filter == nil {
 		return fmt.Errorf("filter is required for crypto price chainlink subscription")
+	}
+
+	// Register callback to internal router if provided
+	if callback != nil {
+		h.router.RegisterCryptoPriceHandler(callback)
 	}
 
 	filterStr, err := filter.ToJSON()
@@ -504,6 +498,11 @@ func (h *RealtimeTypedSubscriptionHandler) SubscribeToEquityPrices(callback Equi
 		return fmt.Errorf("filter is required for equity price subscription")
 	}
 
+	// Register callback to internal router if provided
+	if callback != nil {
+		h.router.RegisterEquityPriceHandler(callback)
+	}
+
 	filterStr, err := filter.ToJSON()
 	if err != nil {
 		return fmt.Errorf("failed to convert filter to JSON: %w", err)
@@ -525,6 +524,11 @@ type CLOBOrderCallback func(order CLOBOrder) error
 
 // SubscribeToCLOBUserOrders subscribes to CLOB user orders
 func (h *RealtimeTypedSubscriptionHandler) SubscribeToCLOBUserOrders(auth ClobAuth, callback CLOBOrderCallback) error {
+	// Register callback to internal router if provided
+	if callback != nil {
+		h.router.RegisterCLOBOrderHandler(callback)
+	}
+
 	return h.client.Subscribe([]Subscription{
 		{
 			Topic:    TopicClobUser,
@@ -539,6 +543,11 @@ type CLOBTradeCallback func(trade CLOBTrade) error
 
 // SubscribeToCLOBUserTrades subscribes to CLOB user trades
 func (h *RealtimeTypedSubscriptionHandler) SubscribeToCLOBUserTrades(auth ClobAuth, callback CLOBTradeCallback) error {
+	// Register callback to internal router if provided
+	if callback != nil {
+		h.router.RegisterCLOBTradeHandler(callback)
+	}
+
 	return h.client.Subscribe([]Subscription{
 		{
 			Topic:    TopicClobUser,
@@ -582,6 +591,11 @@ func (h *RealtimeTypedSubscriptionHandler) SubscribeToCLOBMarketPriceChanges(fil
 		return fmt.Errorf("filter is required for price_change subscription")
 	}
 
+	// Register callback to internal router if provided
+	if callback != nil {
+		h.router.RegisterPriceChangesHandler(callback)
+	}
+
 	filterStr, err := filter.ToJSON()
 	if err != nil {
 		return fmt.Errorf("failed to convert filter to JSON: %w", err)
@@ -609,6 +623,11 @@ type AggOrderbookCallback func(orderbook AggOrderbook) error
 func (h *RealtimeTypedSubscriptionHandler) SubscribeToCLOBMarketAggOrderbook(filter *CLOBMarketFilter, callback AggOrderbookCallback) error {
 	if filter == nil {
 		return fmt.Errorf("filter is required for agg_orderbook subscription")
+	}
+
+	// Register callback to internal router if provided
+	if callback != nil {
+		h.router.RegisterAggOrderbookHandler(callback)
 	}
 
 	filterStr, err := filter.ToJSON()
@@ -640,6 +659,11 @@ func (h *RealtimeTypedSubscriptionHandler) SubscribeToCLOBMarketLastTradePrice(f
 		return fmt.Errorf("filter is required for last_trade_price subscription")
 	}
 
+	// Register callback to internal router if provided
+	if callback != nil {
+		h.router.RegisterLastTradePriceHandler(callback)
+	}
+
 	filterStr, err := filter.ToJSON()
 	if err != nil {
 		return fmt.Errorf("failed to convert filter to JSON: %w", err)
@@ -669,6 +693,11 @@ func (h *RealtimeTypedSubscriptionHandler) SubscribeToCLOBMarketTickSizeChange(f
 		return fmt.Errorf("filter is required for tick_size_change subscription")
 	}
 
+	// Register callback to internal router if provided
+	if callback != nil {
+		h.router.RegisterTickSizeChangeHandler(callback)
+	}
+
 	filterStr, err := filter.ToJSON()
 	if err != nil {
 		return fmt.Errorf("failed to convert filter to JSON: %w", err)
@@ -692,6 +721,11 @@ type ClobMarketCallback func(market ClobMarket) error
 //
 // Filter format: No filters required for market_created
 func (h *RealtimeTypedSubscriptionHandler) SubscribeToCLOBMarketCreated(callback ClobMarketCallback) error {
+	// Register callback to internal router if provided
+	if callback != nil {
+		h.router.RegisterClobMarketHandler(callback)
+	}
+
 	return h.client.Subscribe([]Subscription{
 		{
 			Topic: TopicClobMarket,
@@ -706,6 +740,11 @@ func (h *RealtimeTypedSubscriptionHandler) SubscribeToCLOBMarketCreated(callback
 //
 // Filter format: No filters required for market_resolved
 func (h *RealtimeTypedSubscriptionHandler) SubscribeToCLOBMarketResolved(callback ClobMarketCallback) error {
+	// Register callback to internal router if provided
+	if callback != nil {
+		h.router.RegisterClobMarketHandler(callback)
+	}
+
 	return h.client.Subscribe([]Subscription{
 		{
 			Topic: TopicClobMarket,

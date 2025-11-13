@@ -29,7 +29,7 @@ func main() {
 
 		// Configure reconnection behavior
 		polymarketdataclient.WithAutoReconnect(true),
-		polymarketdataclient.WithMaxReconnectAttempts(10), // Try up to 10 times
+		polymarketdataclient.WithMaxReconnectAttempts(0), // Try up to 10 times
 		polymarketdataclient.WithReconnectBackoff(
 			1*time.Second,  // Initial backoff
 			30*time.Second, // Max backoff

@@ -57,7 +57,9 @@ type baseClient struct {
 	// Channels for control flow
 	closeChan chan struct{}
 	closeOnce sync.Once
-	writeChan chan writeRequest // Channel for serializing WebSocket writes
+
+	writeLoopOnce sync.Once
+	writeChan     chan writeRequest // Channel for serializing WebSocket writes
 }
 
 // newBaseClient creates a new base client with the given protocol and options
@@ -200,13 +202,10 @@ func (c *baseClient) disconnect() error {
 	c.internal.mu.Unlock()
 
 	// Send close message
-	err := c.conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
-	if err != nil {
-		c.logger.Debug("Error sending close message: %v", err)
-	}
+	c.writeChan <- writeRequest{websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, "")}
 
 	// Close connection
-	err = c.conn.Close()
+	err := c.conn.Close()
 	if err != nil {
 		return err
 	}
@@ -378,16 +377,7 @@ func (c *baseClient) ping() {
 			if isClosed {
 				return
 			}
-
-			// err := conn.WriteMessage(websocket.TextMessage, []byte("ping"))
-			// err := conn.WriteMessage(websocket.PingMessage, nil)
-			// if err != nil {
-			// 	c.logger.Error("Error sending ping: %v", err)
-			// 	continue
-			// }
-
 			c.writeChan <- writeRequest{websocket.TextMessage, []byte("ping")}
-
 			// c.logger.Debug("Ping sent")
 		}
 	}
@@ -395,39 +385,41 @@ func (c *baseClient) ping() {
 
 // writeLoop serializes all WebSocket writes through a channel
 func (c *baseClient) writeLoop() {
-	defer func() {
-		c.logger.Debug("Write loop stopped")
-	}()
+	c.writeLoopOnce.Do(func() {
+		defer func() {
+			c.logger.Debug("Write loop stopped")
+		}()
 
-	for {
-		select {
-		case <-c.closeChan:
-			return
-		case req := <-c.writeChan:
-			c.connMu.RLock()
-			conn := c.conn
-			c.connMu.RUnlock()
+		for {
+			select {
+			case <-c.closeChan:
+				return
+			case req := <-c.writeChan:
+				c.connMu.RLock()
+				conn := c.conn
+				c.connMu.RUnlock()
 
-			if conn == nil {
-				continue
-			}
+				if conn == nil {
+					continue
+				}
 
-			c.internal.mu.RLock()
-			isClosed := c.internal.connClosed
-			c.internal.mu.RUnlock()
+				c.internal.mu.RLock()
+				isClosed := c.internal.connClosed
+				c.internal.mu.RUnlock()
 
-			if isClosed {
-				continue
-			}
+				if isClosed {
+					continue
+				}
 
-			c.logger.Debug("Write message %v: %v", req.messageType, string(req.data))
+				c.logger.Debug("Write message %v: %v", req.messageType, string(req.data))
 
-			err := conn.WriteMessage(req.messageType, req.data)
-			if err != nil {
-				c.logger.Error("Error writing message (type=%d): %v", req.messageType, err)
+				err := conn.WriteMessage(req.messageType, req.data)
+				if err != nil {
+					c.logger.Error("Error writing message (type=%d): %v", req.messageType, err)
+				}
 			}
 		}
-	}
+	})
 }
 
 // readMessages reads messages from the WebSocket connection
@@ -459,22 +451,7 @@ func (c *baseClient) readMessages() {
 			c.logger.Error("Error reading message: %v", err)
 
 			// Check if error is recoverable
-			if c.isRecoverableError(err) && c.autoReconnect {
-				c.logger.Info("Connection lost, attempting to reconnect...")
-
-				// Mark connection as closed
-				c.internal.mu.Lock()
-				c.internal.connClosed = true
-				c.internal.mu.Unlock()
-
-				// Call disconnect callback
-				if c.onDisconnectCallback != nil {
-					c.onDisconnectCallback(err)
-				}
-
-				// Trigger reconnection
-				go c.reconnect()
-			}
+			c.tryAutoReconnect(err)
 
 			return
 		}
@@ -523,6 +500,8 @@ func (c *baseClient) readMessages() {
 
 		case websocket.CloseMessage:
 			c.logger.Info("Received close message from server")
+			c.tryAutoReconnect(nil)
+
 			return
 
 		default:
@@ -531,10 +510,29 @@ func (c *baseClient) readMessages() {
 	}
 }
 
+func (c *baseClient) tryAutoReconnect(err error) {
+	if c.isRecoverableError(err) && c.autoReconnect {
+		c.logger.Info("Connection lost, attempting to reconnect...")
+
+		// Mark connection as closed
+		c.internal.mu.Lock()
+		c.internal.connClosed = true
+		c.internal.mu.Unlock()
+
+		// Call disconnect callback
+		if c.onDisconnectCallback != nil {
+			c.onDisconnectCallback(err)
+		}
+
+		// Trigger reconnection
+		go c.reconnect()
+	}
+}
+
 // isRecoverableError determines if an error is recoverable and should trigger reconnection
 func (c *baseClient) isRecoverableError(err error) bool {
 	if err == nil {
-		return false
+		return true
 	}
 
 	// Check for common network errors

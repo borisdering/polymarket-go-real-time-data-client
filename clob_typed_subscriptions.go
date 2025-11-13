@@ -1,6 +1,9 @@
 package polymarketrealtime
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"fmt"
+)
 
 // ClobUserTypedSubscriptionHandler provides typed subscription methods for CLOB User client
 type ClobUserTypedSubscriptionHandler struct {
@@ -251,7 +254,7 @@ func (r *ClobMarketMessageRouter) RouteMessage(data []byte) error {
 	// Parse the message to determine event type
 	var raw map[string]interface{}
 	if err := json.Unmarshal(data, &raw); err != nil {
-		return err
+		return fmt.Errorf("err: %v, raw=%s", err, string(data))
 	}
 
 	eventType, ok := raw["event_type"].(string)

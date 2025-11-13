@@ -431,6 +431,7 @@ func (h *RealtimeTypedSubscriptionHandler) SubscribeToCLOBMarketResolved(callbac
 		},
 	})
 }
+
 // RealtimeMessageRouter routes incoming messages to registered typed callbacks
 type RealtimeMessageRouter struct {
 	// Activity handlers
@@ -557,7 +558,7 @@ func (r *RealtimeMessageRouter) RegisterClobMarketHandler(handler ClobMarketCall
 func (r *RealtimeMessageRouter) RouteMessage(data []byte) error {
 	var msg Message
 	if err := json.Unmarshal(data, &msg); err != nil {
-		return fmt.Errorf("failed to unmarshal message: %w", err)
+		return fmt.Errorf("failed to unmarshal message: %w, %s", err, string(data))
 	}
 
 	switch msg.Topic {

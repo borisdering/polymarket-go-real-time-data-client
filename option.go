@@ -98,3 +98,42 @@ func WithOnReconnect(f func()) ClientOptions {
 		c.OnReconnectCallback = f
 	}
 }
+
+// MessageRouter defines the interface for routing messages to handlers
+type MessageRouter interface {
+	RouteMessage(data []byte) error
+}
+
+// WithRouter sets a message router that will automatically route all incoming messages
+// This eliminates the need to manually call router.RouteMessage() in WithOnNewMessage
+//
+// Example usage:
+//
+//	typedSub := polymarketrealtime.NewRealtimeTypedSubscriptionHandler(nil)
+//	client := polymarketrealtime.New(
+//	    polymarketrealtime.WithRouter(typedSub.GetRouter()),
+//	    polymarketrealtime.WithLogger(polymarketrealtime.NewLogger()),
+//	)
+//	typedSub.SetClient(client)
+func WithRouter(router MessageRouter) ClientOptions {
+	return func(c *Config) {
+		if router != nil {
+			// Wrap the existing OnNewMessage callback
+			existingCallback := c.OnNewMessage
+			c.OnNewMessage = func(data []byte) {
+				// First call the router
+				if err := router.RouteMessage(data); err != nil {
+					// Log error but don't fail
+					if c.Logger != nil {
+						c.Logger.Error("Failed to route message: %v", err)
+					}
+				}
+
+				// Then call the existing callback if any
+				if existingCallback != nil {
+					existingCallback(data)
+				}
+			}
+		}
+	}
+}

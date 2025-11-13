@@ -6,15 +6,81 @@ import (
 )
 
 // RealtimeTypedSubscriptionHandler provides type-safe subscription handlers for different message types
+//
+// This handler combines subscription management with message routing. It internally maintains
+// a RealtimeMessageRouter that routes incoming messages to registered callbacks.
+//
+// Basic usage:
+//
+//	// Create handler and client together
+//	typedSub, client := polymarketrealtime.NewRealtimeTypedSubscriptionHandlerWithOptions(
+//	    polymarketrealtime.WithLogger(polymarketrealtime.NewLogger()),
+//	    polymarketrealtime.WithAutoReconnect(true),
+//	)
+//
+//	client.Connect()
+//
+//	// Subscribe with callback
+//	typedSub.SubscribeToCryptoPrices(func(price CryptoPrice) error {
+//	    log.Printf("Price: %s = $%s", price.Symbol, price.Value.String())
+//	    return nil
+//	}, filter)
 type RealtimeTypedSubscriptionHandler struct {
 	client Client
+	router *RealtimeMessageRouter
 }
 
 // NewRealtimeTypedSubscriptionHandler creates a new typed subscription handler for real-time data
+// The client parameter can be nil and set later using SetClient()
 func NewRealtimeTypedSubscriptionHandler(client Client) *RealtimeTypedSubscriptionHandler {
 	return &RealtimeTypedSubscriptionHandler{
 		client: client,
+		router: NewRealtimeMessageRouter(),
 	}
+}
+
+// NewRealtimeTypedSubscriptionHandlerWithOptions creates a handler and client together
+// This is the recommended way to create a handler as it automatically configures the router
+//
+// Example:
+//
+//	typedSub, client := polymarketrealtime.NewRealtimeTypedSubscriptionHandlerWithOptions(
+//	    polymarketrealtime.WithLogger(polymarketrealtime.NewLogger()),
+//	    polymarketrealtime.WithAutoReconnect(true),
+//	)
+func NewRealtimeTypedSubscriptionHandlerWithOptions(opts ...ClientOptions) (*RealtimeTypedSubscriptionHandler, Client) {
+	handler := &RealtimeTypedSubscriptionHandler{
+		router: NewRealtimeMessageRouter(),
+	}
+
+	// Prepend WithRouter to options so messages are automatically routed
+	allOpts := append([]ClientOptions{WithRouter(handler.router)}, opts...)
+
+	client := New(allOpts...)
+	handler.client = client
+
+	return handler, client
+}
+
+// GetRouter returns the internal message router
+// Use this with WithRouter option to automatically route messages
+//
+// Example:
+//
+//	typedSub := NewRealtimeTypedSubscriptionHandler(nil)
+//	client := New(
+//	    WithRouter(typedSub.GetRouter()),
+//	    WithLogger(NewLogger()),
+//	)
+//	typedSub.SetClient(client)
+func (h *RealtimeTypedSubscriptionHandler) GetRouter() *RealtimeMessageRouter {
+	return h.router
+}
+
+// SetClient sets the client for this handler
+// This is useful when you create the handler before the client
+func (h *RealtimeTypedSubscriptionHandler) SetClient(client Client) {
+	h.client = client
 }
 
 // Activity subscription handlers
@@ -30,6 +96,11 @@ type ActivityTradesCallback func(trade Trade) error
 // Filter format: {"event_slug":"string"} OR {"market_slug":"string"}
 // filter: Optional ActivityFilter to filter by market or event slug
 func (h *RealtimeTypedSubscriptionHandler) SubscribeToActivityTrades(callback ActivityTradesCallback, filter *ActivityFilter) error {
+	// Register callback to internal router if provided
+	if callback != nil {
+		h.router.RegisterActivityTradesHandler(callback)
+	}
+
 	filterStr := ""
 	if filter != nil {
 		var err error
@@ -59,6 +130,11 @@ type ActivityOrdersMatchedCallback func(trade Trade) error
 // Filter format: {"event_slug":"string"} OR {"market_slug":"string"}
 // filter: Optional ActivityFilter to filter by market or event slug
 func (h *RealtimeTypedSubscriptionHandler) SubscribeToActivityOrdersMatched(callback ActivityOrdersMatchedCallback, filter *ActivityFilter) error {
+	// Register callback to internal router if provided
+	if callback != nil {
+		h.router.RegisterActivityOrdersMatchedHandler(callback)
+	}
+
 	filterStr := ""
 	if filter != nil {
 		var err error
@@ -90,6 +166,11 @@ type CommentCreatedCallback func(comment Comment) error
 // Filter format: {"event_slug":"string"} OR {"series_slug":"string"}
 // filter: Optional CommentFilter to filter by event or series slug
 func (h *RealtimeTypedSubscriptionHandler) SubscribeToCommentCreated(callback CommentCreatedCallback, filter *CommentFilter) error {
+	// Register callback to internal router if provided
+	if callback != nil {
+		h.router.RegisterCommentCreatedHandler(callback)
+	}
+
 	filterStr := ""
 	if filter != nil {
 		var err error
@@ -119,6 +200,11 @@ type CommentRemovedCallback func(comment Comment) error
 // Filter format: {"event_slug":"string"} OR {"series_slug":"string"}
 // filter: Optional CommentFilter to filter by event or series slug
 func (h *RealtimeTypedSubscriptionHandler) SubscribeToCommentRemoved(callback CommentRemovedCallback, filter *CommentFilter) error {
+	// Register callback to internal router if provided
+	if callback != nil {
+		h.router.RegisterCommentRemovedHandler(callback)
+	}
+
 	filterStr := ""
 	if filter != nil {
 		var err error
@@ -148,6 +234,11 @@ type ReactionCreatedCallback func(reaction Reaction) error
 // Filter format: {"event_slug":"string"} OR {"series_slug":"string"}
 // filter: Optional CommentFilter to filter by event or series slug
 func (h *RealtimeTypedSubscriptionHandler) SubscribeToReactionCreated(callback ReactionCreatedCallback, filter *CommentFilter) error {
+	// Register callback to internal router if provided
+	if callback != nil {
+		h.router.RegisterReactionCreatedHandler(callback)
+	}
+
 	filterStr := ""
 	if filter != nil {
 		var err error
@@ -177,6 +268,11 @@ type ReactionRemovedCallback func(reaction Reaction) error
 // Filter format: {"event_slug":"string"} OR {"series_slug":"string"}
 // filter: Optional CommentFilter to filter by event or series slug
 func (h *RealtimeTypedSubscriptionHandler) SubscribeToReactionRemoved(callback ReactionRemovedCallback, filter *CommentFilter) error {
+	// Register callback to internal router if provided
+	if callback != nil {
+		h.router.RegisterReactionRemovedHandler(callback)
+	}
+
 	filterStr := ""
 	if filter != nil {
 		var err error
@@ -207,6 +303,11 @@ type RFQRequestCallback func(request RFQRequest) error
 //
 // Filter format: No filters required for RFQ topic
 func (h *RealtimeTypedSubscriptionHandler) SubscribeToRFQRequestCreated(callback RFQRequestCallback) error {
+	// Register callback to internal router if provided
+	if callback != nil {
+		h.router.RegisterRFQRequestHandler(callback)
+	}
+
 	return h.client.Subscribe([]Subscription{
 		{
 			Topic: TopicRfq,
@@ -219,6 +320,11 @@ func (h *RealtimeTypedSubscriptionHandler) SubscribeToRFQRequestCreated(callback
 //
 // This topic SUPPORTS multiple subscriptions. See SubscribeToRFQRequestCreated for details.
 func (h *RealtimeTypedSubscriptionHandler) SubscribeToRFQRequestEdited(callback RFQRequestCallback) error {
+	// Register callback to internal router if provided
+	if callback != nil {
+		h.router.RegisterRFQRequestHandler(callback)
+	}
+
 	return h.client.Subscribe([]Subscription{
 		{
 			Topic: TopicRfq,
@@ -231,6 +337,11 @@ func (h *RealtimeTypedSubscriptionHandler) SubscribeToRFQRequestEdited(callback 
 //
 // This topic SUPPORTS multiple subscriptions. See SubscribeToRFQRequestCreated for details.
 func (h *RealtimeTypedSubscriptionHandler) SubscribeToRFQRequestCanceled(callback RFQRequestCallback) error {
+	// Register callback to internal router if provided
+	if callback != nil {
+		h.router.RegisterRFQRequestHandler(callback)
+	}
+
 	return h.client.Subscribe([]Subscription{
 		{
 			Topic: TopicRfq,
@@ -243,6 +354,11 @@ func (h *RealtimeTypedSubscriptionHandler) SubscribeToRFQRequestCanceled(callbac
 //
 // This topic SUPPORTS multiple subscriptions. See SubscribeToRFQRequestCreated for details.
 func (h *RealtimeTypedSubscriptionHandler) SubscribeToRFQRequestExpired(callback RFQRequestCallback) error {
+	// Register callback to internal router if provided
+	if callback != nil {
+		h.router.RegisterRFQRequestHandler(callback)
+	}
+
 	return h.client.Subscribe([]Subscription{
 		{
 			Topic: TopicRfq,
@@ -258,6 +374,11 @@ type RFQQuoteCallback func(quote RFQQuote) error
 //
 // This topic SUPPORTS multiple subscriptions. See SubscribeToRFQRequestCreated for details.
 func (h *RealtimeTypedSubscriptionHandler) SubscribeToRFQQuoteCreated(callback RFQQuoteCallback) error {
+	// Register callback to internal router if provided
+	if callback != nil {
+		h.router.RegisterRFQQuoteHandler(callback)
+	}
+
 	return h.client.Subscribe([]Subscription{
 		{
 			Topic: TopicRfq,
@@ -270,6 +391,11 @@ func (h *RealtimeTypedSubscriptionHandler) SubscribeToRFQQuoteCreated(callback R
 //
 // This topic SUPPORTS multiple subscriptions. See SubscribeToRFQRequestCreated for details.
 func (h *RealtimeTypedSubscriptionHandler) SubscribeToRFQQuoteEdited(callback RFQQuoteCallback) error {
+	// Register callback to internal router if provided
+	if callback != nil {
+		h.router.RegisterRFQQuoteHandler(callback)
+	}
+
 	return h.client.Subscribe([]Subscription{
 		{
 			Topic: TopicRfq,
@@ -282,6 +408,11 @@ func (h *RealtimeTypedSubscriptionHandler) SubscribeToRFQQuoteEdited(callback RF
 //
 // This topic SUPPORTS multiple subscriptions. See SubscribeToRFQRequestCreated for details.
 func (h *RealtimeTypedSubscriptionHandler) SubscribeToRFQQuoteCanceled(callback RFQQuoteCallback) error {
+	// Register callback to internal router if provided
+	if callback != nil {
+		h.router.RegisterRFQQuoteHandler(callback)
+	}
+
 	return h.client.Subscribe([]Subscription{
 		{
 			Topic: TopicRfq,
@@ -294,6 +425,11 @@ func (h *RealtimeTypedSubscriptionHandler) SubscribeToRFQQuoteCanceled(callback 
 //
 // This topic SUPPORTS multiple subscriptions. See SubscribeToRFQRequestCreated for details.
 func (h *RealtimeTypedSubscriptionHandler) SubscribeToRFQQuoteExpired(callback RFQQuoteCallback) error {
+	// Register callback to internal router if provided
+	if callback != nil {
+		h.router.RegisterRFQQuoteHandler(callback)
+	}
+
 	return h.client.Subscribe([]Subscription{
 		{
 			Topic: TopicRfq,
@@ -436,6 +572,12 @@ func (h *RealtimeTypedSubscriptionHandler) SubscribeToCLOBUserTrades(auth ClobAu
 }
 
 // SubscribeToCLOBUserAll subscribes to all CLOB user messages (orders and trades)
+//
+// Note: This method does not accept a callback parameter. To handle messages, you need to
+// register handlers on the router manually:
+//
+//	typedSub.GetRouter().RegisterCLOBOrderHandler(func(order CLOBOrder) error { ... })
+//	typedSub.GetRouter().RegisterCLOBTradeHandler(func(trade CLOBTrade) error { ... })
 func (h *RealtimeTypedSubscriptionHandler) SubscribeToCLOBUserAll(auth ClobAuth) error {
 	return h.client.Subscribe([]Subscription{
 		{

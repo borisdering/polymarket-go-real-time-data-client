@@ -6,7 +6,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	polymarketdataclient "github.com/ivanzzeth/polymarket-go-real-time-data-client"
+	polymarketrealtime "github.com/ivanzzeth/polymarket-go-real-time-data-client"
 )
 
 func main() {
@@ -23,9 +23,9 @@ func main() {
 	symbolToMonitor := "solusdt" // Options: btcusdt, ethusdt, solusdt, etc.
 
 	// Create the WebSocket client
-	client := polymarketdataclient.New(
-		// polymarketdataclient.WithLogger(polymarketdataclient.NewLogger()),
-		polymarketdataclient.WithOnConnect(func() {
+	client := polymarketrealtime.New(
+		// polymarketrealtime.WithLogger(polymarketrealtime.NewLogger()),
+		polymarketrealtime.WithOnConnect(func() {
 			log.Println("✓ Connected to Polymarket WebSocket!")
 		}),
 	)
@@ -38,8 +38,8 @@ func main() {
 	defer client.Disconnect()
 
 	// Subscribe to a single crypto price with callback
-	filter := polymarketdataclient.NewCryptoPriceFilter(symbolToMonitor)
-	if err := client.SubscribeToCryptoPrices(filter, func(price polymarketdataclient.CryptoPrice) error {
+	filter := polymarketrealtime.NewCryptoPriceFilter(symbolToMonitor)
+	if err := client.SubscribeToCryptoPrices(filter, func(price polymarketrealtime.CryptoPrice) error {
 		log.Printf("[Crypto] %s = $%s (time: %s)",
 			price.Symbol,
 			price.Value.String(),

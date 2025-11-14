@@ -8,7 +8,7 @@ import (
 
 	"github.com/shopspring/decimal"
 
-	polymarketdataclient "github.com/ivanzzeth/polymarket-go-real-time-data-client"
+	polymarketrealtime "github.com/ivanzzeth/polymarket-go-real-time-data-client"
 )
 
 func main() {
@@ -17,16 +17,16 @@ func main() {
 	log.Println()
 
 	// Create client
-	client := polymarketdataclient.New(
-		polymarketdataclient.WithLogger(polymarketdataclient.NewLogger()),
-		polymarketdataclient.WithAutoReconnect(true),
-		polymarketdataclient.WithOnConnect(func() {
+	client := polymarketrealtime.New(
+		polymarketrealtime.WithLogger(polymarketrealtime.NewLogger(polymarketrealtime.LogLevelDebug)),
+		polymarketrealtime.WithAutoReconnect(true),
+		polymarketrealtime.WithOnConnect(func() {
 			log.Println("✅ Connected to Polymarket WebSocket")
 		}),
-		polymarketdataclient.WithOnDisconnect(func(err error) {
+		polymarketrealtime.WithOnDisconnect(func(err error) {
 			log.Printf("❌ Disconnected: %v", err)
 		}),
-		polymarketdataclient.WithOnReconnect(func() {
+		polymarketrealtime.WithOnReconnect(func() {
 			log.Println("🔄 Reconnected successfully")
 		}),
 	)
@@ -47,8 +47,8 @@ func main() {
 	log.Println("\nSubscribing to price changes...")
 	log.Printf("Token IDs: %v", tokenIDs)
 
-	filter := polymarketdataclient.NewCLOBMarketFilter(tokenIDs...)
-	if err := client.SubscribeToCLOBMarketPriceChanges(filter, func(priceChanges polymarketdataclient.PriceChanges) error {
+	filter := polymarketrealtime.NewCLOBMarketFilter(tokenIDs...)
+	if err := client.SubscribeToCLOBMarketPriceChanges(filter, func(priceChanges polymarketrealtime.PriceChanges) error {
 		log.Printf("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 		log.Printf("[Price Changes] Market: %s", priceChanges.Market)
 		log.Printf("  Timestamp: %s", priceChanges.Timestamp)

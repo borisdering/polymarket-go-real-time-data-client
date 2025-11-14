@@ -7,7 +7,7 @@ import (
 	"syscall"
 	"time"
 
-	polymarketdataclient "github.com/ivanzzeth/polymarket-go-real-time-data-client"
+	polymarketrealtime "github.com/ivanzzeth/polymarket-go-real-time-data-client"
 )
 
 func main() {
@@ -23,20 +23,20 @@ func main() {
 	)
 
 	// Create client with reconnection enabled
-	client := polymarketdataclient.New(
+	client := polymarketrealtime.New(
 		// Enable detailed logging to see reconnection attempts
-		polymarketdataclient.WithLogger(polymarketdataclient.NewLogger()),
+		polymarketrealtime.WithLogger(polymarketrealtime.NewLogger(polymarketrealtime.LogLevelDebug)),
 
 		// Configure reconnection behavior
-		polymarketdataclient.WithAutoReconnect(true),
-		polymarketdataclient.WithMaxReconnectAttempts(0), // Try up to 10 times
-		polymarketdataclient.WithReconnectBackoff(
+		polymarketrealtime.WithAutoReconnect(true),
+		polymarketrealtime.WithMaxReconnectAttempts(0), // Try up to 10 times
+		polymarketrealtime.WithReconnectBackoff(
 			1*time.Second,  // Initial backoff
 			30*time.Second, // Max backoff
 		),
 
 		// Connection callback
-		polymarketdataclient.WithOnConnect(func() {
+		polymarketrealtime.WithOnConnect(func() {
 			connectCount++
 			if connectCount == 1 {
 				log.Println("✅ Initial connection established")
@@ -46,14 +46,14 @@ func main() {
 		}),
 
 		// Disconnection callback
-		polymarketdataclient.WithOnDisconnect(func(err error) {
+		polymarketrealtime.WithOnDisconnect(func(err error) {
 			disconnectCount++
 			log.Printf("❌ Connection lost (count: %d): %v", disconnectCount, err)
 			log.Println("   Auto-reconnection will start...")
 		}),
 
 		// Reconnection success callback
-		polymarketdataclient.WithOnReconnect(func() {
+		polymarketrealtime.WithOnReconnect(func() {
 			reconnectCount++
 			log.Printf("🔄 Reconnection successful (count: %d)", reconnectCount)
 			log.Println("   Subscriptions have been restored")
@@ -68,7 +68,7 @@ func main() {
 
 	// Subscribe to Bitcoin price
 	log.Println("Subscribing to BTC price updates...")
-	if err := client.SubscribeToCryptoPrices(polymarketdataclient.NewBTCPriceFilter(), func(price polymarketdataclient.CryptoPrice) error {
+	if err := client.SubscribeToCryptoPrices(polymarketrealtime.NewBTCPriceFilter(), func(price polymarketrealtime.CryptoPrice) error {
 		log.Printf("[Price Update] %s = $%s", price.Symbol, price.Value.String())
 		return nil
 	}); err != nil {

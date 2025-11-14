@@ -8,28 +8,28 @@ import (
 	"syscall"
 	"time"
 
-	polymarketdataclient "github.com/ivanzzeth/polymarket-go-real-time-data-client"
+	polymarketrealtime "github.com/ivanzzeth/polymarket-go-real-time-data-client"
 )
 
 // MarketMonitor manages dynamic subscriptions for markets
 type MarketMonitor struct {
-	client              *polymarketdataclient.Client
+	client              *polymarketrealtime.Client
 	activeMarkets       map[string]bool // market ID -> active status
-	marketSubscriptions map[string][]polymarketdataclient.Subscription
+	marketSubscriptions map[string][]polymarketrealtime.Subscription
 	mu                  sync.RWMutex
 }
 
 // NewMarketMonitor creates a new market monitor
-func NewMarketMonitor(client *polymarketdataclient.Client) *MarketMonitor {
+func NewMarketMonitor(client *polymarketrealtime.Client) *MarketMonitor {
 	return &MarketMonitor{
 		client:              client,
 		activeMarkets:       make(map[string]bool),
-		marketSubscriptions: make(map[string][]polymarketdataclient.Subscription),
+		marketSubscriptions: make(map[string][]polymarketrealtime.Subscription),
 	}
 }
 
 // OnMarketCreated handles market creation events
-func (m *MarketMonitor) OnMarketCreated(market polymarketdataclient.ClobMarket) error {
+func (m *MarketMonitor) OnMarketCreated(market polymarketrealtime.ClobMarket) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -49,7 +49,7 @@ func (m *MarketMonitor) OnMarketCreated(market polymarketdataclient.ClobMarket) 
 	log.Printf("📡 Subscribing to market data for market: %s", marketID)
 
 	// Create filter for CLOB market subscriptions
-	filter := &polymarketdataclient.CLOBMarketFilter{
+	filter := &polymarketrealtime.CLOBMarketFilter{
 		TokenIDs: market.AssetIDs,
 	}
 
@@ -75,22 +75,22 @@ func (m *MarketMonitor) OnMarketCreated(market polymarketdataclient.ClobMarket) 
 	log.Printf("  ✅ Subscribed to last trade prices")
 
 	// Store subscriptions for later unsubscription
-	subscriptions := []polymarketdataclient.Subscription{}
+	subscriptions := []polymarketrealtime.Subscription{}
 	for _, assetID := range market.AssetIDs {
 		subscriptions = append(subscriptions,
-			polymarketdataclient.Subscription{
-				Topic:   polymarketdataclient.TopicCLOBMarket,
-				Type:    polymarketdataclient.MessageTypeCLOBPriceChanges,
+			polymarketrealtime.Subscription{
+				Topic:   polymarketrealtime.TopicCLOBMarket,
+				Type:    polymarketrealtime.MessageTypeCLOBPriceChanges,
 				Filters: assetID,
 			},
-			polymarketdataclient.Subscription{
-				Topic:   polymarketdataclient.TopicCLOBMarket,
-				Type:    polymarketdataclient.MessageTypeCLOBAggOrderbook,
+			polymarketrealtime.Subscription{
+				Topic:   polymarketrealtime.TopicCLOBMarket,
+				Type:    polymarketrealtime.MessageTypeCLOBAggOrderbook,
 				Filters: assetID,
 			},
-			polymarketdataclient.Subscription{
-				Topic:   polymarketdataclient.TopicCLOBMarket,
-				Type:    polymarketdataclient.MessageTypeCLOBLastTradePrice,
+			polymarketrealtime.Subscription{
+				Topic:   polymarketrealtime.TopicCLOBMarket,
+				Type:    polymarketrealtime.MessageTypeCLOBLastTradePrice,
 				Filters: assetID,
 			},
 		)
@@ -104,7 +104,7 @@ func (m *MarketMonitor) OnMarketCreated(market polymarketdataclient.ClobMarket) 
 }
 
 // OnMarketResolved handles market resolution events
-func (m *MarketMonitor) OnMarketResolved(market polymarketdataclient.ClobMarket) error {
+func (m *MarketMonitor) OnMarketResolved(market polymarketrealtime.ClobMarket) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -195,8 +195,8 @@ func main() {
 	var monitor *MarketMonitor
 
 	// Create message router for market data
-	router := polymarketdataclient.NewRealtimeMessageRouter()
-	router.RegisterPriceChangesHandler(func(priceChanges polymarketdataclient.PriceChanges) error {
+	router := polymarketrealtime.NewRealtimeMessageRouter()
+	router.RegisterPriceChangesHandler(func(priceChanges polymarketrealtime.PriceChanges) error {
 		mu.Lock()
 		priceChangeCount++
 		count := priceChangeCount
@@ -210,7 +210,7 @@ func main() {
 		return nil
 	})
 
-	router.RegisterAggOrderbookHandler(func(orderbook polymarketdataclient.AggOrderbook) error {
+	router.RegisterAggOrderbookHandler(func(orderbook polymarketrealtime.AggOrderbook) error {
 		mu.Lock()
 		orderbookCount++
 		count := orderbookCount
@@ -221,7 +221,7 @@ func main() {
 		return nil
 	})
 
-	router.RegisterLastTradePriceHandler(func(lastTrade polymarketdataclient.LastTradePrice) error {
+	router.RegisterLastTradePriceHandler(func(lastTrade polymarketrealtime.LastTradePrice) error {
 		mu.Lock()
 		lastTradeCount++
 		count := lastTradeCount
@@ -233,16 +233,16 @@ func main() {
 	})
 
 	// Create client
-	client := polymarketdataclient.New(
-		// polymarketdataclient.WithLogger(polymarketdataclient.NewLogger()),
-		polymarketdataclient.WithAutoReconnect(true),
-		polymarketdataclient.WithOnConnect(func() {
+	client := polymarketrealtime.New(
+		// polymarketrealtime.WithLogger(polymarketrealtime.NewLogger()),
+		polymarketrealtime.WithAutoReconnect(true),
+		polymarketrealtime.WithOnConnect(func() {
 			log.Println("✅ Connected to CLOB Market WebSocket")
 		}),
-		polymarketdataclient.WithOnDisconnect(func(err error) {
+		polymarketrealtime.WithOnDisconnect(func(err error) {
 			log.Printf("❌ Disconnected: %v", err)
 		}),
-		polymarketdataclient.WithOnReconnect(func() {
+		polymarketrealtime.WithOnReconnect(func() {
 			log.Println("🔄 Reconnected successfully")
 		}),
 	)
@@ -257,10 +257,10 @@ func main() {
 	monitor = NewMarketMonitor(client)
 
 	// Create separate client for market lifecycle events
-	lifecycleClient := polymarketdataclient.New(
-		// polymarketdataclient.WithHost("wss://ws-subscriptions-clob.polymarket.com/ws/market"),
-		polymarketdataclient.WithLogger(polymarketdataclient.NewLogger()),
-		polymarketdataclient.WithAutoReconnect(true),
+	lifecycleClient := polymarketrealtime.New(
+		// polymarketrealtime.WithHost("wss://ws-subscriptions-clob.polymarket.com/ws/market"),
+		polymarketrealtime.WithLogger(polymarketrealtime.NewLogger(polymarketrealtime.LogLevelDebug)),
+		polymarketrealtime.WithAutoReconnect(true),
 	)
 
 	// Connect the lifecycle client

@@ -9,26 +9,45 @@ type Logger interface {
 	Error(format string, args ...any)
 }
 
-type logger struct{}
+type LogLevel int
 
-func NewLogger() Logger {
-	return &logger{}
+const (
+	LogLevelError LogLevel = iota
+	LogLevelWarn
+	LogLevelInfo
+	LogLevelDebug
+)
+
+type logger struct {
+	level LogLevel
 }
 
-func (logger) Debug(format string, args ...any) {
-	fmt.Printf("[PolymarketRealTimeDataClient][DEBUG] "+format+"\n", args...)
+func NewLogger(level LogLevel) Logger {
+	return &logger{level: level}
 }
 
-func (logger) Info(format string, args ...any) {
-	fmt.Printf("[PolymarketRealTimeDataClient][INFO] "+format+"\n", args...)
+func (l logger) Debug(format string, args ...any) {
+	if l.level <= LogLevelDebug {
+		fmt.Printf("[PolymarketRealTimeDataClient][DEBUG] "+format+"\n", args...)
+	}
 }
 
-func (logger) Warn(format string, args ...any) {
-	fmt.Printf("[PolymarketRealTimeDataClient][WARN] "+format+"\n", args...)
+func (l logger) Info(format string, args ...any) {
+	if l.level <= LogLevelInfo {
+		fmt.Printf("[PolymarketRealTimeDataClient][INFO] "+format+"\n", args...)
+	}
 }
 
-func (logger) Error(format string, args ...any) {
-	fmt.Printf("[PolymarketRealTimeDataClient][ERROR] "+format+"\n", args...)
+func (l logger) Warn(format string, args ...any) {
+	if l.level <= LogLevelWarn {
+		fmt.Printf("[PolymarketRealTimeDataClient][WARN] "+format+"\n", args...)
+	}
+}
+
+func (l logger) Error(format string, args ...any) {
+	if l.level <= LogLevelWarn {
+		fmt.Printf("[PolymarketRealTimeDataClient][ERROR] "+format+"\n", args...)
+	}
 }
 
 type silentLogger struct {

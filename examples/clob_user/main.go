@@ -46,7 +46,7 @@ func main() {
 
 	// Create client
 	client := polymarketrealtime.New(
-		polymarketrealtime.WithLogger(polymarketrealtime.NewLogger()),
+		polymarketrealtime.WithLogger(polymarketrealtime.NewLogger(polymarketrealtime.LogLevelDebug)),
 		polymarketrealtime.WithAutoReconnect(true),
 		polymarketrealtime.WithOnConnect(func() {
 			log.Println("✅ Connected to CLOB User endpoint")

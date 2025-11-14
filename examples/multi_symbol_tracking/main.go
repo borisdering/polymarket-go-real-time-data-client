@@ -7,7 +7,7 @@ import (
 	"sync"
 	"syscall"
 
-	polymarketdataclient "github.com/ivanzzeth/polymarket-go-real-time-data-client"
+	polymarketrealtime "github.com/ivanzzeth/polymarket-go-real-time-data-client"
 )
 
 func main() {
@@ -27,7 +27,7 @@ func main() {
 	var messageCount sync.Map // map[string]int
 
 	// Create separate client for each symbol
-	var clients []polymarketdataclient.WsClient
+	var clients []polymarketrealtime.WsClient
 	var wg sync.WaitGroup
 
 	for _, symbol := range symbols {
@@ -38,12 +38,12 @@ func main() {
 			defer wg.Done()
 
 			// Create dedicated client for this symbol
-			client := polymarketdataclient.New(
-				// polymarketdataclient.WithLogger(polymarketdataclient.NewLogger()),
-				polymarketdataclient.WithOnConnect(func() {
+			client := polymarketrealtime.New(
+				// polymarketrealtime.WithLogger(polymarketrealtime.NewLogger()),
+				polymarketrealtime.WithOnConnect(func() {
 					log.Printf("✓ [%s] Connected", symbol)
 				}),
-				polymarketdataclient.WithOnDisconnect(func(err error) {
+				polymarketrealtime.WithOnDisconnect(func(err error) {
 					if err != nil {
 						log.Printf("✗ [%s] Disconnected: %v", symbol, err)
 					}
@@ -61,8 +61,8 @@ func main() {
 			clients = append(clients, client)
 
 			// Subscribe to this specific symbol
-			filter := polymarketdataclient.NewCryptoPriceFilter(symbol)
-			if err := client.SubscribeToCryptoPrices(filter, func(price polymarketdataclient.CryptoPrice) error {
+			filter := polymarketrealtime.NewCryptoPriceFilter(symbol)
+			if err := client.SubscribeToCryptoPrices(filter, func(price polymarketrealtime.CryptoPrice) error {
 				// Increment message count
 				count := 1
 				if val, ok := messageCount.Load(symbol); ok {

@@ -420,6 +420,7 @@ func (c *baseClient) writeLoop() {
 				c.connMu.RUnlock()
 
 				if conn == nil {
+					c.logger.Debug("Skipping write, connection is nil")
 					continue
 				}
 
@@ -428,6 +429,7 @@ func (c *baseClient) writeLoop() {
 				c.internal.mu.RUnlock()
 
 				if isClosed {
+					c.logger.Debug("Skipping write, connection is closed")
 					continue
 				}
 
@@ -437,6 +439,12 @@ func (c *baseClient) writeLoop() {
 				err := conn.WriteMessage(req.messageType, req.data)
 				if err != nil {
 					c.logger.Error("Error writing message (type=%d): %v", req.messageType, err)
+					// Check if this is a recoverable connection error
+					if c.isRecoverableError(err) {
+						c.logger.Info("Write error is recoverable, triggering reconnection")
+						c.tryAutoReconnect(err)
+						return
+					}
 				}
 			}
 		}
@@ -544,22 +552,30 @@ func (c *baseClient) readMessages() {
 }
 
 func (c *baseClient) tryAutoReconnect(err error) {
-	if c.isRecoverableError(err) && c.autoReconnect {
-		c.logger.Info("Connection lost, attempting to reconnect...")
-
-		// Mark connection as closed
-		c.internal.mu.Lock()
-		c.internal.connClosed = true
-		c.internal.mu.Unlock()
-
-		// Call disconnect callback
-		if c.onDisconnectCallback != nil {
-			c.onDisconnectCallback(err)
-		}
-
-		// Trigger reconnection
-		go c.reconnect()
+	if !c.isRecoverableError(err) {
+		c.logger.Error("Unrecoverable error occurred: %v, not attempting reconnection", err)
+		return
 	}
+
+	if !c.autoReconnect {
+		c.logger.Info("Auto-reconnect is disabled, connection will not be restored")
+		return
+	}
+
+	c.logger.Info("Connection lost due to: %v, attempting to reconnect...", err)
+
+	// Mark connection as closed
+	c.internal.mu.Lock()
+	c.internal.connClosed = true
+	c.internal.mu.Unlock()
+
+	// Call disconnect callback
+	if c.onDisconnectCallback != nil {
+		c.onDisconnectCallback(err)
+	}
+
+	// Trigger reconnection
+	go c.reconnect()
 }
 
 // isRecoverableError determines if an error is recoverable and should trigger reconnection
@@ -572,47 +588,66 @@ func (c *baseClient) isRecoverableError(err error) bool {
 	if errors.Is(err, io.EOF) ||
 		errors.Is(err, io.ErrUnexpectedEOF) ||
 		errors.Is(err, syscall.EPIPE) ||
-		errors.Is(err, syscall.ECONNRESET) {
+		errors.Is(err, syscall.ECONNRESET) ||
+		errors.Is(err, syscall.ECONNREFUSED) ||
+		errors.Is(err, syscall.ECONNABORTED) ||
+		errors.Is(err, syscall.ETIMEDOUT) {
+		c.logger.Info("Detected recoverable network error: %v", err)
 		return true
 	}
 
-	// Check for net.OpError
+	// Check for net.OpError (covers most network-related errors)
 	var netErr *net.OpError
 	if errors.As(err, &netErr) {
+		c.logger.Info("Detected network operation error: %v", netErr)
+		return true
+	}
+
+	// Check for WebSocket close errors
+	if websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway,
+		websocket.CloseAbnormalClosure, websocket.CloseNoStatusReceived) {
+		c.logger.Info("Detected WebSocket close error: %v", err)
 		return true
 	}
 
 	// Check error message for common connection issues
-	errMsg := err.Error()
+	errMsg := strings.ToLower(err.Error())
 	recoverableMessages := []string{
 		"broken pipe",
 		"connection reset",
+		"connection reset by peer",
 		"connection refused",
+		"connection aborted",
 		"i/o timeout",
+		"timeout",
 		"use of closed network connection",
 		"connection closed",
 		"eof",
+		"unexpected eof",
+		"network is unreachable",
+		"no route to host",
 	}
 
 	for _, msg := range recoverableMessages {
-		if strings.Contains(strings.ToLower(errMsg), msg) {
+		if strings.Contains(errMsg, msg) {
+			c.logger.Info("Detected recoverable connection error: %s", err.Error())
 			return true
 		}
 	}
 
-	c.logger.Warn("Recover connection when encountering unkown error %v", err)
+	// For unknown errors, log a warning and still attempt recovery
+	c.logger.Warn("Attempting to recover from unknown error: %v", err)
 
 	return true
 }
 
-// TODO: Fix reconnect
 // reconnect attempts to reconnect to the WebSocket server with exponential backoff
 func (c *baseClient) reconnect() {
-	c.logger.Info("Trying to reconnect...")
 	c.internal.mu.Lock()
 
 	// Check if already reconnecting
 	if c.internal.isReconnecting {
+		c.logger.Debug("Reconnection already in progress, skipping duplicate attempt")
 		c.internal.mu.Unlock()
 		return
 	}
@@ -621,6 +656,13 @@ func (c *baseClient) reconnect() {
 	c.internal.isReconnecting = true
 	c.internal.reconnectAttempts = 0
 	c.internal.mu.Unlock()
+
+	maxAttempts := c.maxReconnectAttempts
+	if maxAttempts == 0 {
+		c.logger.Info("Starting reconnection process (infinite retries enabled)")
+	} else {
+		c.logger.Info("Starting reconnection process (max %d attempts)", maxAttempts)
+	}
 
 	// Exponential backoff parameters
 	backoff := c.reconnectBackoffInit
@@ -631,6 +673,7 @@ func (c *baseClient) reconnect() {
 		if !c.autoReconnect {
 			c.internal.mu.RUnlock()
 
+			c.logger.Info("Auto-reconnect disabled, stopping reconnection attempts")
 			c.internal.mu.Lock()
 			c.internal.isReconnecting = false
 			c.internal.mu.Unlock()
@@ -656,27 +699,33 @@ func (c *baseClient) reconnect() {
 		attempt := c.internal.reconnectAttempts
 		c.internal.mu.Unlock()
 
-		c.logger.Info("Reconnection attempt %d (backoff: %v)", attempt, backoff)
+		if c.maxReconnectAttempts > 0 {
+			c.logger.Info("Reconnection attempt %d/%d (waiting %v before retry)", attempt, c.maxReconnectAttempts, backoff)
+		} else {
+			c.logger.Info("Reconnection attempt %d (waiting %v before retry)", attempt, backoff)
+		}
 
 		// Wait before attempting
 		time.Sleep(backoff)
 
 		// Attempt to reconnect
+		c.logger.Debug("Attempting to establish connection...")
 		err := c.connect()
 		if err != nil {
-			c.logger.Error("Reconnection attempt %d failed: %v", attempt, err)
-
 			// Increase backoff exponentially
-			backoff = backoff * 2
-			if backoff > c.reconnectBackoffMax {
-				backoff = c.reconnectBackoffMax
+			nextBackoff := backoff * 2
+			if nextBackoff > c.reconnectBackoffMax {
+				nextBackoff = c.reconnectBackoffMax
 			}
+
+			c.logger.Error("Reconnection attempt %d failed: %v (next retry in %v)", attempt, err, nextBackoff)
+			backoff = nextBackoff
 
 			continue
 		}
 
 		// Reconnection successful
-		c.logger.Info("Reconnection successful after %d attempts", attempt)
+		c.logger.Info("✓ Reconnection successful after %d attempts", attempt)
 
 		// Restore subscriptions
 		c.restoreSubscriptions()
@@ -693,6 +742,7 @@ func (c *baseClient) reconnect() {
 		c.internal.connClosed = false
 		c.internal.mu.Unlock()
 
+		c.logger.Info("Connection fully restored and ready")
 		return
 	}
 }

@@ -64,9 +64,10 @@ const (
 type TradeStatus string
 
 const (
-	TradeStatusMatched   = "MATCHED"
-	TradeStatusMined     = "MINED"
-	TradeStatusConfirmed = "CONFIRMED"
+	TradeStatusMatched                = "MATCHED"
+	TradeStatusMined                  = "MINED"
+	TradeStatusConfirmed              = "CONFIRMED"
+	TradeStatusCanceledMarketResolved = "CANCELED_MARKET_RESOLVED"
 )
 
 // Comment represents a comment on an event or series.

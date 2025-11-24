@@ -31,44 +31,44 @@ type Config struct {
 	OnReconnectCallback  func()
 }
 
-type ClientOptions func(*Config)
+type ClientOption func(*Config)
 
 // WithLogger sets the logger for the client
-func WithLogger(l Logger) ClientOptions {
+func WithLogger(l Logger) ClientOption {
 	return func(c *Config) {
 		c.Logger = l
 	}
 }
 
 // WithPingInterval sets the ping interval for the client
-func WithPingInterval(interval time.Duration) ClientOptions {
+func WithPingInterval(interval time.Duration) ClientOption {
 	return func(c *Config) {
 		c.PingInterval = interval
 	}
 }
 
 // WithHost sets the host for the client
-func WithHost(host string) ClientOptions {
+func WithHost(host string) ClientOption {
 	return func(c *Config) {
 		c.Host = host
 	}
 }
 
 // WithOnConnect sets the onConnect callback for the client
-func WithOnConnect(f func()) ClientOptions {
+func WithOnConnect(f func()) ClientOption {
 	return func(c *Config) {
 		c.OnConnectCallback = f
 	}
 }
 
-func withOnNewMessage(f func([]byte)) ClientOptions {
+func withOnNewMessage(f func([]byte)) ClientOption {
 	return func(c *Config) {
 		c.OnNewMessage = f
 	}
 }
 
 // WithAutoReconnect enables or disables automatic reconnection on connection failures
-func WithAutoReconnect(enabled bool) ClientOptions {
+func WithAutoReconnect(enabled bool) ClientOption {
 	return func(c *Config) {
 		c.AutoReconnect = enabled
 	}
@@ -76,41 +76,41 @@ func WithAutoReconnect(enabled bool) ClientOptions {
 
 // WithMaxReconnectAttempts sets the maximum number of reconnection attempts
 // Set to 0 for infinite retries
-func WithMaxReconnectAttempts(max int) ClientOptions {
+func WithMaxReconnectAttempts(max int) ClientOption {
 	return func(c *Config) {
 		c.MaxReconnectAttempts = max
 	}
 }
 
 // WithReconnectBackoff sets the initial and maximum backoff duration for reconnection attempts
-func WithReconnectBackoff(initial, max time.Duration) ClientOptions {
+func WithReconnectBackoff(initial, max time.Duration) ClientOption {
 	return func(c *Config) {
 		c.ReconnectBackoffInit = initial
 		c.ReconnectBackoffMax = max
 	}
 }
 
-func WithReadTimeout(timeout time.Duration) ClientOptions {
+func WithReadTimeout(timeout time.Duration) ClientOption {
 	return func(c *Config) {
 		c.ReadTimeout = timeout
 	}
 }
 
-func WithWriteTimeout(timeout time.Duration) ClientOptions {
+func WithWriteTimeout(timeout time.Duration) ClientOption {
 	return func(c *Config) {
 		c.WriteTimeout = timeout
 	}
 }
 
 // WithOnDisconnect sets a callback that is called when the connection is lost
-func WithOnDisconnect(f func(error)) ClientOptions {
+func WithOnDisconnect(f func(error)) ClientOption {
 	return func(c *Config) {
 		c.OnDisconnectCallback = f
 	}
 }
 
 // WithOnReconnect sets a callback that is called when reconnection succeeds
-func WithOnReconnect(f func()) ClientOptions {
+func WithOnReconnect(f func()) ClientOption {
 	return func(c *Config) {
 		c.OnReconnectCallback = f
 	}
@@ -132,7 +132,7 @@ type MessageRouter interface {
 //	    polymarketrealtime.WithLogger(polymarketrealtime.NewLogger()),
 //	)
 //	typedSub.SetClient(client)
-func withRouter(router MessageRouter) ClientOptions {
+func withRouter(router MessageRouter) ClientOption {
 	return func(c *Config) {
 		if router != nil {
 			// Wrap the existing OnNewMessage callback

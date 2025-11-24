@@ -47,7 +47,7 @@ type Client struct {
 
 // New creates a new client using the baseClient infrastructure
 // This provides backward compatibility while using the improved baseClient implementation
-func New(opts ...ClientOptions) *Client {
+func New(opts ...ClientOption) *Client {
 	protocol := NewRealtimeProtocol()
 
 	router := NewRealtimeMessageRouter()

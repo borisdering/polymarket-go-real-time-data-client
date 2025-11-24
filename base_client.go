@@ -65,7 +65,7 @@ type baseClient struct {
 }
 
 // newBaseClient creates a new base client with the given protocol and options
-func newBaseClient(protocol Protocol, opts ...ClientOptions) *baseClient {
+func newBaseClient(protocol Protocol, opts ...ClientOption) *baseClient {
 	// Create config with defaults
 	config := &Config{
 		Host:                 protocol.GetDefaultHost(),

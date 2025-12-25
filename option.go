@@ -1,6 +1,9 @@
 package polymarketrealtime
 
-import "time"
+import (
+	"net/url"
+	"time"
+)
 
 const (
 	defaultHost                 = "wss://ws-live-data.polymarket.com"
@@ -24,6 +27,7 @@ type Config struct {
 	ReconnectBackoffMax  time.Duration
 	ReadTimeout          time.Duration
 	WriteTimeout         time.Duration
+	ProxyURL             *url.URL // Optional HTTP/HTTPS proxy URL
 
 	OnConnectCallback    func()
 	OnNewMessage         func([]byte)
@@ -113,6 +117,21 @@ func WithOnDisconnect(f func(error)) ClientOption {
 func WithOnReconnect(f func()) ClientOption {
 	return func(c *Config) {
 		c.OnReconnectCallback = f
+	}
+}
+
+// WithProxyURL sets the HTTP/HTTPS proxy URL for WebSocket connections
+// The proxy URL should be in the format: http://host:port or https://host:port
+// If nil, no proxy will be used (default behavior)
+//
+// Example:
+//	proxyURL, _ := url.Parse("http://127.0.0.1:7897")
+//	client := polymarketrealtime.New(
+//		polymarketrealtime.WithProxyURL(proxyURL),
+//	)
+func WithProxyURL(proxyURL *url.URL) ClientOption {
+	return func(c *Config) {
+		c.ProxyURL = proxyURL
 	}
 }
 

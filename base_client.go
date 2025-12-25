@@ -5,6 +5,8 @@ import (
 	"errors"
 	"io"
 	"net"
+	"net/http"
+	"net/url"
 	"strings"
 	"sync"
 	"syscall"
@@ -37,6 +39,7 @@ type baseClient struct {
 	reconnectBackoffMax  time.Duration
 	readTimeout          time.Duration
 	writeTimeout         time.Duration
+	proxyURL             *url.URL // Optional HTTP/HTTPS proxy URL
 
 	// Callbacks
 	onConnectCallback    func()
@@ -98,6 +101,7 @@ func newBaseClient(protocol Protocol, opts ...ClientOption) *baseClient {
 		reconnectBackoffMax:  config.ReconnectBackoffMax,
 		readTimeout:          config.ReadTimeout,
 		writeTimeout:         config.WriteTimeout,
+		proxyURL:             config.ProxyURL,
 
 		onConnectCallback:    config.OnConnectCallback,
 		onNewMessage:         config.OnNewMessage,
@@ -145,6 +149,12 @@ func (c *baseClient) connect() error {
 	// Establish WebSocket connection
 	dialer := websocket.Dialer{
 		HandshakeTimeout: 10 * time.Second,
+	}
+
+	// Configure proxy if provided
+	if c.proxyURL != nil {
+		dialer.Proxy = http.ProxyURL(c.proxyURL)
+		c.logger.Debug("Using proxy: %s", c.proxyURL.String())
 	}
 
 	conn, _, err := dialer.Dial(c.host, nil)

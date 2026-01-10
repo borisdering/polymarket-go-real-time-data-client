@@ -34,6 +34,7 @@ type baseClient struct {
 	host                 string
 	pingInterval         time.Duration
 	autoReconnect        bool
+	autoReconnectConfig  bool // Stores the initial configured value
 	maxReconnectAttempts int
 	reconnectBackoffInit time.Duration
 	reconnectBackoffMax  time.Duration
@@ -96,6 +97,7 @@ func newBaseClient(protocol Protocol, opts ...ClientOption) *baseClient {
 		logger:               config.Logger,
 		pingInterval:         config.PingInterval,
 		autoReconnect:        config.AutoReconnect,
+		autoReconnectConfig:  config.AutoReconnect, // Store initial config
 		maxReconnectAttempts: config.MaxReconnectAttempts,
 		reconnectBackoffInit: config.ReconnectBackoffInit,
 		reconnectBackoffMax:  config.ReconnectBackoffMax,
@@ -116,6 +118,12 @@ func newBaseClient(protocol Protocol, opts ...ClientOption) *baseClient {
 func (c *baseClient) connect() error {
 	c.connMu.Lock()
 	defer c.connMu.Unlock()
+
+	// Restore autoReconnect to the initial configured value
+	// This ensures that after a Disconnect()/Connect() cycle, auto-reconnect is re-enabled
+	c.internal.mu.Lock()
+	c.autoReconnect = c.autoReconnectConfig
+	c.internal.mu.Unlock()
 
 	// Check if already connected
 	if c.conn != nil {

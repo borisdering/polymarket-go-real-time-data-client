@@ -1074,13 +1074,27 @@ func (r *RealtimeMessageRouter) routeCLOBMarketMessage(msg Message) error {
 			}
 		}
 	case MessageTypeAggOrderbook:
-		var orderbook AggOrderbook
-		if err := json.Unmarshal(msg.Payload, &orderbook); err != nil {
-			return fmt.Errorf("failed to unmarshal agg orderbook: %w", err)
-		}
-		for _, handler := range r.aggOrderbookHandlers {
-			if err := handler(orderbook); err != nil {
-				return err
+		// Try to unmarshal as array first (when subscribing to multiple token IDs)
+		var orderbooks []AggOrderbook
+		if err := json.Unmarshal(msg.Payload, &orderbooks); err == nil {
+			// Successfully unmarshaled as array, call handler for each orderbook
+			for _, orderbook := range orderbooks {
+				for _, handler := range r.aggOrderbookHandlers {
+					if err := handler(orderbook); err != nil {
+						return err
+					}
+				}
+			}
+		} else {
+			// Not an array, try to unmarshal as single object
+			var orderbook AggOrderbook
+			if err := json.Unmarshal(msg.Payload, &orderbook); err != nil {
+				return fmt.Errorf("failed to unmarshal agg orderbook (tried both array and object): %w", err)
+			}
+			for _, handler := range r.aggOrderbookHandlers {
+				if err := handler(orderbook); err != nil {
+					return err
+				}
 			}
 		}
 	case MessageTypeLastTradePrice:

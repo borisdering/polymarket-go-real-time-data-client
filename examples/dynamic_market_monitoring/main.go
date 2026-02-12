@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"net/url"
 	"os"
 	"os/signal"
 	"sync"
@@ -232,8 +233,27 @@ func main() {
 		return nil
 	})
 
-	// Create client
-	client := polymarketrealtime.New(
+	// Set proxy from environment if available
+	var proxyURL *url.URL
+	if proxyStr := os.Getenv("https_proxy"); proxyStr != "" {
+		if parsed, err := url.Parse(proxyStr); err == nil {
+			proxyURL = parsed
+		}
+	} else if proxyStr := os.Getenv("HTTPS_PROXY"); proxyStr != "" {
+		if parsed, err := url.Parse(proxyStr); err == nil {
+			proxyURL = parsed
+		}
+	} else if proxyStr := os.Getenv("http_proxy"); proxyStr != "" {
+		if parsed, err := url.Parse(proxyStr); err == nil {
+			proxyURL = parsed
+		}
+	} else if proxyStr := os.Getenv("HTTP_PROXY"); proxyStr != "" {
+		if parsed, err := url.Parse(proxyStr); err == nil {
+			proxyURL = parsed
+		}
+	}
+
+	opts := []polymarketrealtime.ClientOption{
 		// polymarketrealtime.WithLogger(polymarketrealtime.NewLogger()),
 		polymarketrealtime.WithAutoReconnect(true),
 		polymarketrealtime.WithOnConnect(func() {
@@ -245,7 +265,13 @@ func main() {
 		polymarketrealtime.WithOnReconnect(func() {
 			log.Println("🔄 Reconnected successfully")
 		}),
-	)
+	}
+	if proxyURL != nil {
+		opts = append(opts, polymarketrealtime.WithProxyURL(proxyURL))
+	}
+
+	// Create client
+	client := polymarketrealtime.New(opts...)
 
 	// Connect to the server
 	log.Println("Connecting to CLOB Market WebSocket...")
@@ -257,11 +283,15 @@ func main() {
 	monitor = NewMarketMonitor(client)
 
 	// Create separate client for market lifecycle events
-	lifecycleClient := polymarketrealtime.New(
+	lifecycleOpts := []polymarketrealtime.ClientOption{
 		// polymarketrealtime.WithHost("wss://ws-subscriptions-clob.polymarket.com/ws/market"),
 		polymarketrealtime.WithLogger(polymarketrealtime.NewLogger(polymarketrealtime.LogLevelDebug)),
 		polymarketrealtime.WithAutoReconnect(true),
-	)
+	}
+	if proxyURL != nil {
+		lifecycleOpts = append(lifecycleOpts, polymarketrealtime.WithProxyURL(proxyURL))
+	}
+	lifecycleClient := polymarketrealtime.New(lifecycleOpts...)
 
 	// Connect the lifecycle client
 	if err := lifecycleClient.Connect(); err != nil {

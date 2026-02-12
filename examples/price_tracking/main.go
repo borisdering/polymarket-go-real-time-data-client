@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"net/url"
 	"os"
 	"os/signal"
 	"syscall"
@@ -22,13 +23,38 @@ func main() {
 	// Symbol to monitor (change this to monitor different symbols)
 	symbolToMonitor := "solusdt" // Options: btcusdt, ethusdt, solusdt, etc.
 
-	// Create the WebSocket client
-	client := polymarketrealtime.New(
+	// Set proxy from environment if available
+	var proxyURL *url.URL
+	if proxyStr := os.Getenv("https_proxy"); proxyStr != "" {
+		if parsed, err := url.Parse(proxyStr); err == nil {
+			proxyURL = parsed
+		}
+	} else if proxyStr := os.Getenv("HTTPS_PROXY"); proxyStr != "" {
+		if parsed, err := url.Parse(proxyStr); err == nil {
+			proxyURL = parsed
+		}
+	} else if proxyStr := os.Getenv("http_proxy"); proxyStr != "" {
+		if parsed, err := url.Parse(proxyStr); err == nil {
+			proxyURL = parsed
+		}
+	} else if proxyStr := os.Getenv("HTTP_PROXY"); proxyStr != "" {
+		if parsed, err := url.Parse(proxyStr); err == nil {
+			proxyURL = parsed
+		}
+	}
+
+	opts := []polymarketrealtime.ClientOption{
 		// polymarketrealtime.WithLogger(polymarketrealtime.NewLogger()),
 		polymarketrealtime.WithOnConnect(func() {
 			log.Println("✓ Connected to Polymarket WebSocket!")
 		}),
-	)
+	}
+	if proxyURL != nil {
+		opts = append(opts, polymarketrealtime.WithProxyURL(proxyURL))
+	}
+
+	// Create the WebSocket client
+	client := polymarketrealtime.New(opts...)
 
 	// Connect to the server
 	log.Printf("Connecting to Polymarket to monitor %s...\n", symbolToMonitor)

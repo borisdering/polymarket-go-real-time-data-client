@@ -243,9 +243,10 @@ func (c *baseClient) disconnect() error {
 // subscribe sends subscription requests to the server
 func (c *baseClient) subscribe(subscriptions []Subscription) error {
 	c.connMu.RLock()
-	defer c.connMu.RUnlock()
+	conn := c.conn
+	c.connMu.RUnlock()
 
-	if c.conn == nil {
+	if conn == nil {
 		return errors.New("not connected")
 	}
 
@@ -327,20 +328,11 @@ func (c *baseClient) unsubscribe(subscriptions []Subscription) error {
 	}
 
 	// First send unsubscribe message for the subscriptions to remove
-	unsubMessage, err := c.protocol.FormatSubscription(subscriptions)
+	// Use FormatUnsubscribe if available, otherwise fall back to FormatSubscription with string replacement
+	unsubMessage, err := c.protocol.FormatUnsubscribe(subscriptions)
 	if err != nil {
 		return err
 	}
-
-	// Replace "subscribe" with "unsubscribe" in the message
-	messageStr := string(unsubMessage)
-	if strings.Contains(messageStr, `"action":"subscribe"`) {
-		messageStr = strings.Replace(messageStr, `"action":"subscribe"`, `"action":"unsubscribe"`, 1)
-	} else if strings.Contains(messageStr, `"type":"MARKET"`) {
-		// CLOB protocol uses different format
-		messageStr = strings.Replace(messageStr, `"type":"MARKET"`, `"type":"UNSUBSCRIBE"`, 1)
-	}
-	unsubMessage = []byte(messageStr)
 
 	c.logger.Debug("Sending unsubscription message: %s", string(unsubMessage))
 

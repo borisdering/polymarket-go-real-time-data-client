@@ -8,6 +8,9 @@ type Protocol interface {
 	// FormatSubscription formats subscriptions into the protocol-specific message format
 	FormatSubscription(subscriptions []Subscription) ([]byte, error)
 
+	// FormatUnsubscribe formats unsubscriptions into the protocol-specific message format
+	FormatUnsubscribe(subscriptions []Subscription) ([]byte, error)
+
 	// ParseMessage parses a raw message into a structured Message format
 	// Returns the parsed message and any error encountered
 	ParseMessage(data []byte) (*Message, error)

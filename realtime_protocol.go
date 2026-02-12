@@ -33,6 +33,21 @@ func (p *realtimeProtocol) FormatSubscription(subscriptions []Subscription) ([]b
 	return json.Marshal(msg)
 }
 
+// FormatUnsubscribe formats unsubscriptions into the real-time protocol message format
+func (p *realtimeProtocol) FormatUnsubscribe(subscriptions []Subscription) ([]byte, error) {
+	type subscriptionMessage struct {
+		Action        string         `json:"action"`
+		Subscriptions []Subscription `json:"subscriptions"`
+	}
+
+	msg := subscriptionMessage{
+		Action:        "unsubscribe",
+		Subscriptions: subscriptions,
+	}
+
+	return json.Marshal(msg)
+}
+
 // ParseMessage parses a raw message into a structured Message format
 func (p *realtimeProtocol) ParseMessage(data []byte) (*Message, error) {
 	var msg Message

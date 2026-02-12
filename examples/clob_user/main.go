@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"net/url"
 	"os"
 	"os/signal"
 	"syscall"
@@ -44,8 +45,27 @@ func main() {
 		Passphrase: passphrase,
 	}
 
-	// Create client
-	client := polymarketrealtime.New(
+	// Set proxy from environment if available
+	var proxyURL *url.URL
+	if proxyStr := os.Getenv("https_proxy"); proxyStr != "" {
+		if parsed, err := url.Parse(proxyStr); err == nil {
+			proxyURL = parsed
+		}
+	} else if proxyStr := os.Getenv("HTTPS_PROXY"); proxyStr != "" {
+		if parsed, err := url.Parse(proxyStr); err == nil {
+			proxyURL = parsed
+		}
+	} else if proxyStr := os.Getenv("http_proxy"); proxyStr != "" {
+		if parsed, err := url.Parse(proxyStr); err == nil {
+			proxyURL = parsed
+		}
+	} else if proxyStr := os.Getenv("HTTP_PROXY"); proxyStr != "" {
+		if parsed, err := url.Parse(proxyStr); err == nil {
+			proxyURL = parsed
+		}
+	}
+
+	opts := []polymarketrealtime.ClientOption{
 		polymarketrealtime.WithLogger(polymarketrealtime.NewLogger(polymarketrealtime.LogLevelDebug)),
 		polymarketrealtime.WithAutoReconnect(true),
 		polymarketrealtime.WithOnConnect(func() {
@@ -57,7 +77,16 @@ func main() {
 		polymarketrealtime.WithOnReconnect(func() {
 			log.Println("🔄 Reconnected to CLOB User endpoint")
 		}),
-	)
+	}
+
+	// Add proxy if configured
+	if proxyURL != nil {
+		opts = append(opts, polymarketrealtime.WithProxyURL(proxyURL))
+		log.Printf("Using proxy: %s", proxyURL.String())
+	}
+
+	// Create client
+	client := polymarketrealtime.New(opts...)
 
 	// Connect to the server
 	log.Println("Connecting to CLOB User WebSocket...")

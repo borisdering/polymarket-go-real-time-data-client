@@ -5,6 +5,15 @@ import (
 	"fmt"
 )
 
+// getMapKeys returns all keys from a map[string]interface{}
+func getMapKeys(m map[string]interface{}) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	return keys
+}
+
 // RealtimeTypedSubscriptionHandler provides type-safe subscription handlers for different message types
 //
 // This handler combines subscription management with message routing. It internally maintains
@@ -877,8 +886,50 @@ func (r *RealtimeMessageRouter) RegisterClobMarketHandler(handler ClobMarketCall
 
 // RouteMessage routes a raw message to the appropriate typed handlers
 func (r *RealtimeMessageRouter) RouteMessage(data []byte) error {
+	// Handle empty message
+	if len(data) == 0 {
+		return fmt.Errorf("empty message")
+	}
+
+	// Log message format for debugging
+	dataStr := string(data)
+	if len(dataStr) > 500 {
+		dataStr = dataStr[:500] + "..."
+	}
+	firstChar := byte(0)
+	if len(data) > 0 {
+		firstChar = data[0]
+	}
+	fmt.Printf("[RouteMessage] Received message (len=%d, first_char=%c): %s\n", len(data), firstChar, dataStr)
+
+	// Check if it's an array format (some CLOB messages come as arrays)
+	var clobArray []map[string]interface{}
+	if err := json.Unmarshal(data, &clobArray); err == nil && len(clobArray) > 0 {
+		fmt.Printf("[RouteMessage] Detected ARRAY format with %d elements\n", len(clobArray))
+		// Process each element in the array
+		for i, elem := range clobArray {
+			fmt.Printf("[RouteMessage] Processing array element %d with keys: %v\n", i, getMapKeys(elem))
+			if err := r.routeCLOBMessage(elem, data); err != nil {
+				fmt.Printf("[RouteMessage] Failed to route array element %d: %v\n", i, err)
+				return fmt.Errorf("failed to route array element %d: %w", i, err)
+			}
+		}
+		return nil
+	}
+
+	// Try to parse as standard RTDS message format
 	var msg Message
-	if err := json.Unmarshal(data, &msg); err != nil {
+	if err := json.Unmarshal(data, &msg); err == nil && msg.Topic != "" && msg.Type != "" {
+		fmt.Printf("[RouteMessage] Successfully parsed as RTDS format: topic=%s, type=%s\n", msg.Topic, msg.Type)
+		return r.routeStandardMessage(msg)
+	}
+
+	fmt.Printf("[RouteMessage] Failed to parse as RTDS format, trying CLOB format\n")
+
+	// Try CLOB format as single object
+	var clobMsg map[string]interface{}
+	if err := json.Unmarshal(data, &clobMsg); err != nil {
+		fmt.Printf("[RouteMessage] Failed to parse as CLOB map format: %v\n", err)
 		// Print raw data with length info for debugging
 		maxLen := len(data)
 		if maxLen > 200 {
@@ -887,6 +938,123 @@ func (r *RealtimeMessageRouter) RouteMessage(data []byte) error {
 		return fmt.Errorf("failed to unmarshal message: %w (len=%d, data=%q)", err, len(data), string(data[:maxLen]))
 	}
 
+	fmt.Printf("[RouteMessage] Successfully parsed as CLOB map format with keys: %v\n", getMapKeys(clobMsg))
+	return r.routeCLOBMessage(clobMsg, data)
+}
+
+// routeCLOBMessage routes a single CLOB message object
+func (r *RealtimeMessageRouter) routeCLOBMessage(clobMsg map[string]interface{}, originalData []byte) error {
+	var msg Message
+
+	// Try to extract topic and type from CLOB message
+	// Extract topic
+	if topic, ok := clobMsg["topic"].(string); ok {
+		msg.Topic = Topic(topic)
+	} else if channel, ok := clobMsg["channel"].(string); ok {
+		// Map channel to topic
+		switch channel {
+		case "market":
+			msg.Topic = TopicClobMarket
+		case "user":
+			msg.Topic = TopicClobUser
+		}
+	} else {
+		// If no topic/channel, check event_type to determine channel
+		// User channel messages have event_type: "trade" or "order"
+		// Market channel messages have event_type: "book", "price_change", "last_trade_price", etc.
+		if eventType, ok := clobMsg["event_type"].(string); ok {
+			// Check if it's a user channel message
+			if eventType == "trade" || eventType == "order" {
+				msg.Topic = TopicClobUser
+				// Map event_type to MessageType for user channel
+				if eventType == "trade" {
+					msg.Type = MessageTypeTrade
+				} else if eventType == "order" {
+					msg.Type = MessageTypeOrder
+				}
+			} else {
+				// Market channel message
+				msg.Topic = TopicClobMarket
+				// Map event_type to MessageType
+				switch eventType {
+				case "book":
+					msg.Type = MessageTypeAggOrderbook
+				case "price_change":
+					msg.Type = MessageTypePriceChange
+				case "last_trade_price":
+					msg.Type = MessageTypeLastTradePrice
+				case "tick_size_change":
+					msg.Type = MessageTypeTickSizeChange
+				case "best_bid_ask":
+					msg.Type = MessageTypeBestBidAsk
+				case "new_market":
+					msg.Type = MessageTypeMarketCreated
+				case "market_resolved":
+					msg.Type = MessageTypeMarketResolved
+				default:
+					msg.Type = MessageType(eventType)
+				}
+			}
+		}
+	}
+
+	// Extract type (if not already set from event_type)
+	if msg.Type == "" {
+		if msgType, ok := clobMsg["type"].(string); ok {
+			msg.Type = MessageType(msgType)
+		} else if eventType, ok := clobMsg["event_type"].(string); ok {
+			// Map event_type to MessageType based on channel
+			if msg.Topic == TopicClobUser {
+				// User channel
+				if eventType == "trade" {
+					msg.Type = MessageTypeTrade
+				} else if eventType == "order" {
+					msg.Type = MessageTypeOrder
+				} else {
+					msg.Type = MessageType(eventType)
+				}
+			} else {
+				// Market channel
+				switch eventType {
+				case "book":
+					msg.Type = MessageTypeAggOrderbook
+				case "price_change":
+					msg.Type = MessageTypePriceChange
+				case "last_trade_price":
+					msg.Type = MessageTypeLastTradePrice
+				case "tick_size_change":
+					msg.Type = MessageTypeTickSizeChange
+				case "best_bid_ask":
+					msg.Type = MessageTypeBestBidAsk
+				case "new_market":
+					msg.Type = MessageTypeMarketCreated
+				case "market_resolved":
+					msg.Type = MessageTypeMarketResolved
+				default:
+					msg.Type = MessageType(eventType)
+				}
+			}
+		}
+	}
+
+	// Extract payload - for CLOB messages, the entire message is the payload
+	clobMsgBytes, err := json.Marshal(clobMsg)
+	if err == nil {
+		msg.Payload = clobMsgBytes
+	} else {
+		msg.Payload = originalData
+	}
+
+	// If topic is still empty, we can't route the message
+	if msg.Topic == "" {
+		return fmt.Errorf("unknown topic: %s", msg.Topic)
+	}
+
+	return r.routeStandardMessage(msg)
+}
+
+// routeStandardMessage routes a standard Message to the appropriate handlers
+func (r *RealtimeMessageRouter) routeStandardMessage(msg Message) error {
 	switch msg.Topic {
 	case TopicActivity:
 		return r.routeActivityMessage(msg)

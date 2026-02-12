@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"net/url"
 	"os"
 	"os/signal"
 	"syscall"
@@ -23,7 +24,27 @@ func main() {
 	)
 
 	// Create client with reconnection enabled
-	client := polymarketrealtime.New(
+	// Set proxy from environment if available
+	var proxyURL *url.URL
+	if proxyStr := os.Getenv("https_proxy"); proxyStr != "" {
+		if parsed, err := url.Parse(proxyStr); err == nil {
+			proxyURL = parsed
+		}
+	} else if proxyStr := os.Getenv("HTTPS_PROXY"); proxyStr != "" {
+		if parsed, err := url.Parse(proxyStr); err == nil {
+			proxyURL = parsed
+		}
+	} else if proxyStr := os.Getenv("http_proxy"); proxyStr != "" {
+		if parsed, err := url.Parse(proxyStr); err == nil {
+			proxyURL = parsed
+		}
+	} else if proxyStr := os.Getenv("HTTP_PROXY"); proxyStr != "" {
+		if parsed, err := url.Parse(proxyStr); err == nil {
+			proxyURL = parsed
+		}
+	}
+
+	opts := []polymarketrealtime.ClientOption{
 		// Enable detailed logging to see reconnection attempts
 		polymarketrealtime.WithLogger(polymarketrealtime.NewLogger(polymarketrealtime.LogLevelDebug)),
 
@@ -58,7 +79,14 @@ func main() {
 			log.Printf("🔄 Reconnection successful (count: %d)", reconnectCount)
 			log.Println("   Subscriptions have been restored")
 		}),
-	)
+	}
+
+	// Add proxy if available
+	if proxyURL != nil {
+		opts = append(opts, polymarketrealtime.WithProxyURL(proxyURL))
+	}
+
+	client := polymarketrealtime.New(opts...)
 
 	// Connect to the server
 	log.Println("Connecting to Polymarket WebSocket...")

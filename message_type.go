@@ -76,6 +76,9 @@ const (
 	// MessageTypeMarketResolved is the type for CLOB market resolution
 	MessageTypeMarketResolved MessageType = "market_resolved"
 
+	// MessageTypeBestBidAsk is the type for CLOB market best bid/ask updates
+	MessageTypeBestBidAsk MessageType = "best_bid_ask"
+
 	// Aliases for backward compatibility and clarity
 	MessageTypeCLOBOrder         = MessageTypeOrder
 	MessageTypeCLOBTrade         = MessageTypeTrade

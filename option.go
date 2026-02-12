@@ -18,7 +18,8 @@ const (
 
 // Config contains all configuration options for the WebSocket client
 type Config struct {
-	Host                 string
+	Host                 string // RTDS host (for non-CLOB topics)
+	ClobHost             string // CLOB host (for CLOB topics, optional - uses protocol default if empty)
 	Logger               Logger
 	PingInterval         time.Duration
 	AutoReconnect        bool
@@ -51,10 +52,18 @@ func WithPingInterval(interval time.Duration) ClientOption {
 	}
 }
 
-// WithHost sets the host for the client
+// WithHost sets the RTDS host for the client (for non-CLOB topics)
 func WithHost(host string) ClientOption {
 	return func(c *Config) {
 		c.Host = host
+	}
+}
+
+// WithClobHost sets the CLOB host for the client (for CLOB topics)
+// If not set, CLOB clients will use the protocol's default host
+func WithClobHost(host string) ClientOption {
+	return func(c *Config) {
+		c.ClobHost = host
 	}
 }
 

@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"net/url"
 	"os"
 	"os/signal"
 	"sync"
@@ -23,6 +24,26 @@ func main() {
 	// Symbols to monitor
 	symbols := []string{"btcusdt", "ethusdt", "solusdt"}
 
+	// Set proxy from environment if available
+	var proxyURL *url.URL
+	if proxyStr := os.Getenv("https_proxy"); proxyStr != "" {
+		if parsed, err := url.Parse(proxyStr); err == nil {
+			proxyURL = parsed
+		}
+	} else if proxyStr := os.Getenv("HTTPS_PROXY"); proxyStr != "" {
+		if parsed, err := url.Parse(proxyStr); err == nil {
+			proxyURL = parsed
+		}
+	} else if proxyStr := os.Getenv("http_proxy"); proxyStr != "" {
+		if parsed, err := url.Parse(proxyStr); err == nil {
+			proxyURL = parsed
+		}
+	} else if proxyStr := os.Getenv("HTTP_PROXY"); proxyStr != "" {
+		if parsed, err := url.Parse(proxyStr); err == nil {
+			proxyURL = parsed
+		}
+	}
+
 	// Shared message counter
 	var messageCount sync.Map // map[string]int
 
@@ -37,8 +58,7 @@ func main() {
 		go func() {
 			defer wg.Done()
 
-			// Create dedicated client for this symbol
-			client := polymarketrealtime.New(
+			opts := []polymarketrealtime.ClientOption{
 				// polymarketrealtime.WithLogger(polymarketrealtime.NewLogger()),
 				polymarketrealtime.WithOnConnect(func() {
 					log.Printf("✓ [%s] Connected", symbol)
@@ -48,7 +68,13 @@ func main() {
 						log.Printf("✗ [%s] Disconnected: %v", symbol, err)
 					}
 				}),
-			)
+			}
+			if proxyURL != nil {
+				opts = append(opts, polymarketrealtime.WithProxyURL(proxyURL))
+			}
+
+			// Create dedicated client for this symbol
+			client := polymarketrealtime.New(opts...)
 
 			// Connect to the server
 			log.Printf("Connecting [%s]...", symbol)

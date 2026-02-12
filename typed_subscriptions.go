@@ -896,21 +896,21 @@ func (r *RealtimeMessageRouter) RouteMessage(data []byte) error {
 	if len(dataStr) > 500 {
 		dataStr = dataStr[:500] + "..."
 	}
-	firstChar := byte(0)
-	if len(data) > 0 {
-		firstChar = data[0]
-	}
-	fmt.Printf("[RouteMessage] Received message (len=%d, first_char=%c): %s\n", len(data), firstChar, dataStr)
+	// firstChar := byte(0)
+	// if len(data) > 0 {
+	// 	firstChar = data[0]
+	// }
+	// fmt.Printf("[RouteMessage] Received message (len=%d, first_char=%c): %s\n", len(data), firstChar, dataStr)
 
 	// Check if it's an array format (some CLOB messages come as arrays)
 	var clobArray []map[string]interface{}
 	if err := json.Unmarshal(data, &clobArray); err == nil && len(clobArray) > 0 {
-		fmt.Printf("[RouteMessage] Detected ARRAY format with %d elements\n", len(clobArray))
+		// fmt.Printf("[RouteMessage] Detected ARRAY format with %d elements\n", len(clobArray))
 		// Process each element in the array
 		for i, elem := range clobArray {
-			fmt.Printf("[RouteMessage] Processing array element %d with keys: %v\n", i, getMapKeys(elem))
+			// fmt.Printf("[RouteMessage] Processing array element %d with keys: %v\n", i, getMapKeys(elem))
 			if err := r.routeCLOBMessage(elem, data); err != nil {
-				fmt.Printf("[RouteMessage] Failed to route array element %d: %v\n", i, err)
+				// fmt.Printf("[RouteMessage] Failed to route array element %d: %v\n", i, err)
 				return fmt.Errorf("failed to route array element %d: %w", i, err)
 			}
 		}
@@ -920,16 +920,16 @@ func (r *RealtimeMessageRouter) RouteMessage(data []byte) error {
 	// Try to parse as standard RTDS message format
 	var msg Message
 	if err := json.Unmarshal(data, &msg); err == nil && msg.Topic != "" && msg.Type != "" {
-		fmt.Printf("[RouteMessage] Successfully parsed as RTDS format: topic=%s, type=%s\n", msg.Topic, msg.Type)
+		// fmt.Printf("[RouteMessage] Successfully parsed as RTDS format: topic=%s, type=%s\n", msg.Topic, msg.Type)
 		return r.routeStandardMessage(msg)
 	}
 
-	fmt.Printf("[RouteMessage] Failed to parse as RTDS format, trying CLOB format\n")
+	// fmt.Printf("[RouteMessage] Failed to parse as RTDS format, trying CLOB format\n")
 
 	// Try CLOB format as single object
 	var clobMsg map[string]interface{}
 	if err := json.Unmarshal(data, &clobMsg); err != nil {
-		fmt.Printf("[RouteMessage] Failed to parse as CLOB map format: %v\n", err)
+		// fmt.Printf("[RouteMessage] Failed to parse as CLOB map format: %v\n", err)
 		// Print raw data with length info for debugging
 		maxLen := len(data)
 		if maxLen > 200 {
@@ -938,7 +938,7 @@ func (r *RealtimeMessageRouter) RouteMessage(data []byte) error {
 		return fmt.Errorf("failed to unmarshal message: %w (len=%d, data=%q)", err, len(data), string(data[:maxLen]))
 	}
 
-	fmt.Printf("[RouteMessage] Successfully parsed as CLOB map format with keys: %v\n", getMapKeys(clobMsg))
+	// fmt.Printf("[RouteMessage] Successfully parsed as CLOB map format with keys: %v\n", getMapKeys(clobMsg))
 	return r.routeCLOBMessage(clobMsg, data)
 }
 

@@ -74,7 +74,7 @@ func WithOnConnect(f func()) ClientOption {
 	}
 }
 
-func withOnNewMessage(f func([]byte)) ClientOption {
+func WithOnNewMessage(f func([]byte)) ClientOption {
 	return func(c *Config) {
 		c.OnNewMessage = f
 	}
@@ -134,6 +134,7 @@ func WithOnReconnect(f func()) ClientOption {
 // If nil, no proxy will be used (default behavior)
 //
 // Example:
+//
 //	proxyURL, _ := url.Parse("http://127.0.0.1:7897")
 //	client := polymarketrealtime.New(
 //		polymarketrealtime.WithProxyURL(proxyURL),
